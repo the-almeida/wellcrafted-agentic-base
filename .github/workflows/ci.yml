@@ -41,6 +41,17 @@ jobs:
       - name: Start Supabase
         run: pnpm exec supabase start
 
+      - name: Export Supabase env
+        run: |
+          STATUS=$(pnpm exec supabase status -o json)
+          {
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r '.API_URL')"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(echo "$STATUS" | jq -r '.ANON_KEY')"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS" | jq -r '.SERVICE_ROLE_KEY')"
+            echo "DATABASE_URL=$(echo "$STATUS" | jq -r '.DB_URL')"
+          } >> "$GITHUB_ENV"
+
       - name: Apply migrations
         run: pnpm db:migrate
 
