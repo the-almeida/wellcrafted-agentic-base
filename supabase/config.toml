@@ -151,9 +151,11 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# We allow the entire app for local dev so Supabase will accept any `redirectTo` we pass
+# (currently `/auth/callback?next=...`). Tighten for production.
+additional_redirect_urls = ["http://localhost:3000/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -316,6 +318,26 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+[auth.external.google]
+# Enable after registering an OAuth app at https://console.cloud.google.com/apis/credentials.
+# Authorized redirect URI to register at Google: http://localhost:54321/auth/v1/callback
+# Flip `enabled` to true and set GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET in `.env.local`.
+enabled = true
+client_id = "env(GOOGLE_OAUTH_CLIENT_ID)"
+secret = "env(GOOGLE_OAUTH_CLIENT_SECRET)"
+redirect_uri = "http://localhost:54321/auth/v1/callback"
+# Google's OIDC nonce check fails on local dev (see comment on `[auth.external.apple]`); skip it.
+skip_nonce_check = true
+
+[auth.external.facebook]
+# Enable after registering an app at https://developers.facebook.com/apps/.
+# Authorized redirect URI to register at Facebook: http://localhost:54321/auth/v1/callback
+# Flip `enabled` to true and set FACEBOOK_OAUTH_CLIENT_ID / FACEBOOK_OAUTH_CLIENT_SECRET in `.env.local`.
+enabled = true
+client_id = "env(FACEBOOK_OAUTH_CLIENT_ID)"
+secret = "env(FACEBOOK_OAUTH_CLIENT_SECRET)"
+redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

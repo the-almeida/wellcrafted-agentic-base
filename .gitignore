@@ -54,3 +54,9 @@ next-env.d.ts
 
 # logs
 *.log
+
+# Supabase CLI state (containers, branch metadata, Studio's snippet cache).
+# Migrations and config.toml are tracked; everything else under supabase/ is local state.
+supabase/.branches/
+supabase/.temp/
+supabase/snippets/

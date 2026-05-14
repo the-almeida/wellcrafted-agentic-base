@@ -31,6 +31,13 @@ const serverShape = {
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   DATABASE_URL: z.url(),
   SENTRY_AUTH_TOKEN: optionalString,
+  // OAuth provider credentials. Consumed by Supabase via supabase/config.toml's
+  // env() indirection, NOT by app code — so they stay optional here. Listed so
+  // missing values surface during startup validation instead of at sign-in time.
+  GOOGLE_OAUTH_CLIENT_ID: optionalString,
+  GOOGLE_OAUTH_CLIENT_SECRET: optionalString,
+  FACEBOOK_OAUTH_CLIENT_ID: optionalString,
+  FACEBOOK_OAUTH_CLIENT_SECRET: optionalString,
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 }
 
