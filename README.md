@@ -10,7 +10,7 @@ The repo is engineered around a tight feedback loop with coding agents: every ru
 
 ## Quick Start
 
-Required: Node 22+, pnpm 9+, Supabase CLI, jq.
+Required: Node 22+, pnpm 9+, Docker, jq. The Supabase CLI is installed automatically by `pnpm install` (pinned in `devDependencies`).
 
 ```bash
 git clone <repo>

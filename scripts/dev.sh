@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! supabase status >/dev/null 2>&1; then
+if ! pnpm exec supabase status >/dev/null 2>&1; then
   echo "→ Starting Supabase..."
-  supabase start
+  pnpm exec supabase start
 fi
 
-next dev
+pnpm exec next dev
