@@ -1,0 +1,4 @@
+pnpm lint-staged
+pnpm typecheck
+./scripts/check-policies.sh
+./scripts/check-no-edge.sh

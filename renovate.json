@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":dependencyDashboard",
+    ":maintainLockFilesWeekly"
+  ],
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": false,
+      "groupName": "non-major dependencies"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "dev dependencies"
+    },
+    {
+      "matchPackagePatterns": ["^@?next", "^react"],
+      "groupName": "next/react"
+    },
+    {
+      "matchPackageNames": ["@supabase/ssr", "@supabase/supabase-js"],
+      "groupName": "supabase"
+    },
+    {
+      "matchPackagePatterns": ["^@sentry/"],
+      "groupName": "sentry"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
+}
