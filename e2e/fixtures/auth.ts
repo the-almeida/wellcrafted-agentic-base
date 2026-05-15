@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { Page } from '@playwright/test'
 
 import { env } from '@/shared/lib/env'
 
@@ -42,6 +43,7 @@ type AuthFixtures = {
   ) => Promise<SeededUser>
   pollOtp: (recipient: string) => Promise<string>
   uniqueEmail: (prefix?: string) => string
+  signInAs: (page: Page, user: SeededUser) => Promise<void>
 }
 
 export const test = base.extend<AuthFixtures>({
@@ -69,6 +71,15 @@ export const test = base.extend<AuthFixtures>({
         await new Promise((resolve) => setTimeout(resolve, 500))
       }
       throw new Error(`Mailpit: no OTP for ${recipient} within 10s`)
+    })
+  },
+  signInAs: async ({}, use) => {
+    await use(async (page, user) => {
+      await page.goto('/sign-in')
+      await page.getByLabel('Email').fill(user.email)
+      await page.getByLabel('Password').fill(user.password)
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await page.waitForURL((url) => !url.pathname.startsWith('/sign-in'))
     })
   },
   seedUser: async ({}, use) => {
