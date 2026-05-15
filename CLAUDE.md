@@ -172,4 +172,4 @@ See [docs/dod.md](./docs/dod.md). `/review` and `/commit` validate against this 
 
 - The dev server expects Supabase CLI to be running. `pnpm dev` starts it automatically; check status with `pnpm supabase:status` if something feels off.
 - Edge runtime is forbidden project-wide (`scripts/check-no-edge.sh` enforces). Pino, ALS, and `node:crypto` all require Node.
-- Adding a table that needs RLS requires TWO migrations in the same commit: Drizzle for the table, Supabase CLI for the RLS policies. Run `supabase db reset` locally to verify both apply cleanly.
+- Adding a table that needs RLS requires two SQL files in the same commit, both under `supabase/migrations/`: the Drizzle-generated `CREATE TABLE` (via `pnpm db:generate`) and the hand-authored RLS / trigger SQL (via `supabase migration new`). Supabase CLI applies the folder as one timestamp-ordered sequence. Run `supabase db reset` locally to verify the whole sequence applies cleanly. See ADR-0003.

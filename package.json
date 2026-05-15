@@ -29,7 +29,7 @@
   },
   "engines": {
     "node": ">=22",
-    "pnpm": ">=9"
+    "pnpm": ">=11"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -64,7 +64,6 @@
     "@commitlint/config-conventional": "^21.0.0",
     "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.60.0",
-    "@rolldown/binding-linux-x64-gnu": "^1.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.19.19",
     "@types/react": "^19",

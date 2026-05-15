@@ -2,10 +2,18 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
 import boundaries from 'eslint-plugin-boundaries'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Next's preset registers `jsx-a11y` with a lightweight rule set. Layer
+  // the plugin's `recommended` rules on top so all static-analyzable a11y
+  // violations are caught at lint time (DoD: "no jsx-a11y violations").
+  // We spread only `rules` because Next already registered the plugin —
+  // re-registering via `flatConfigs.recommended` errors with "Cannot
+  // redefine plugin 'jsx-a11y'".
+  { rules: jsxA11y.flatConfigs.recommended.rules },
   globalIgnores([
     '.next/**',
     'out/**',

@@ -10,7 +10,7 @@ The repo is engineered around a tight feedback loop with coding agents: every ru
 
 ## Quick Start
 
-Required: Node 22+, pnpm 9+, Docker, jq. The Supabase CLI is installed automatically by `pnpm install` (pinned in `devDependencies`).
+Required: Node 22+, pnpm 11+, Docker, jq. The Supabase CLI is installed automatically by `pnpm install` (pinned in `devDependencies`).
 
 ```bash
 git clone <repo>
@@ -29,11 +29,15 @@ Modular Monolith + Vertical Slice per feature + Hexagonal (ports & adapters) at 
 src/
 ├── modules/<domain>/        # strong boundaries
 │   ├── features/<feature>/  # vertical slices
-│   └── domain/policy.ts     # per-module authorization
+│   ├── domain/policy.ts     # per-module authorization
+│   ├── index.ts             # server-side public surface
+│   └── client.ts            # client-side public surface (see ADR-0006)
 ├── shared/                  # ui, lib, db, observability
 ├── proxy.ts                 # Next 16 proxy (formerly middleware): session refresh + request ID
-└── app/                     # Next.js routes (thin)
+└── app/                     # Next.js routes (thin); (public)/page.tsx covers /
 ```
+
+Tailwind v4 (no `tailwind.config.ts`; design tokens via `@theme` in `src/app/globals.css`). Drizzle SQL and hand-authored RLS/trigger SQL both live in `supabase/migrations/` (see ADR-0003). `playwright.config.ts` sits at the repo root.
 
 Full details in [docs/architecture.md](./docs/architecture.md) and [ADR 0001](./docs/adr/0001-modular-monolith-with-vertical-slices.md).
 
