@@ -3,29 +3,48 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-import { signIn, createSupabaseBrowserClient } from '@/modules/auth/client'
+import { requestSignInOtp, signIn } from '@/modules/auth/client'
+
+import { AuthDivider } from '../_components/auth-divider'
+import { OAuthButtons } from '../_components/oauth-buttons'
+import { OtpVerifyForm } from '../_components/otp-verify-form'
+
+type Stage = { kind: 'choose' } | { kind: 'awaiting-code'; email: string }
 
 export function SignInForm() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [stage, setStage] = useState<Stage>({ kind: 'choose' })
 
-  function onOAuth(provider: 'google' | 'facebook') {
+  function onError(message: string) {
+    setError(message || null)
+  }
+
+  function onSendCode(email: string) {
+    if (!email) {
+      setError('Enter your email above first.')
+      return
+    }
     setError(null)
-    const supabase = createSupabaseBrowserClient()
     startTransition(async () => {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
-        },
-      })
-      if (oauthError) setError(oauthError.message)
+      const result = await requestSignInOtp({ email })
+      if (!result.ok) {
+        setError(result.error.message)
+        return
+      }
+      setStage({ kind: 'awaiting-code', email })
     })
+  }
+
+  if (stage.kind === 'awaiting-code') {
+    return <OtpVerifyForm email={stage.email} onBack={() => setStage({ kind: 'choose' })} />
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <OAuthButtons disabled={isPending} onError={onError} />
+      <AuthDivider />
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -80,25 +99,19 @@ export function SignInForm() {
         >
           {isPending ? 'Signing in…' : 'Sign in'}
         </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            const form = e.currentTarget.closest('form')
+            const email = String(new FormData(form ?? undefined).get('email') ?? '')
+            onSendCode(email)
+          }}
+          disabled={isPending}
+          className="text-muted-foreground text-xs underline disabled:opacity-60"
+        >
+          Or send me a 6-digit code instead
+        </button>
       </form>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => onOAuth('google')}
-          disabled={isPending}
-          className="border-border rounded-md border px-3 py-2 text-sm disabled:opacity-60"
-        >
-          Google
-        </button>
-        <button
-          type="button"
-          onClick={() => onOAuth('facebook')}
-          disabled={isPending}
-          className="border-border rounded-md border px-3 py-2 text-sm disabled:opacity-60"
-        >
-          Facebook
-        </button>
-      </div>
     </div>
   )
 }
