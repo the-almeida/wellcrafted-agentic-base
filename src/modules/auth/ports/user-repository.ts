@@ -5,7 +5,7 @@ import type { User } from '../domain/user'
 export type CreateUserInput = {
   id: UserId
   email: string
-  name?: string | null
+  name: string
 }
 
 export type UserRepository = {

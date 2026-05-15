@@ -33,7 +33,7 @@ export const userRepository: UserRepository = {
       .values({
         id: input.id,
         email: input.email,
-        name: input.name ?? null,
+        name: input.name,
       })
       .returning()
     if (!row) throw new Error('user creation returned no rows')

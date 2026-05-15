@@ -78,12 +78,13 @@ describe('auth.users → public.users trigger', () => {
     expect(rows[0]?.name).toBe('Felix Fullname')
   })
 
-  it('refuses to create a user when no name is provided (trigger guard)', async () => {
-    // Defense-in-depth invariant from #24: every code path that creates
-    // auth.users must supply a non-blank name. Supabase wraps the
-    // trigger's RAISE EXCEPTION as a generic "Database error" — we don't
-    // pin the exact string, only that creation failed AND no public.users
-    // row leaked through.
+  it('refuses to create a user when no name is provided (schema guard)', async () => {
+    // Every code path that creates auth.users must supply a non-blank
+    // name. The trigger normalises whitespace via NULLIF(btrim(...),'')
+    // and inserts; the public.users.name NOT NULL + CHECK btrim(name)
+    // <> '' constraints reject anything blank. Supabase wraps both as
+    // a generic "Database error" — we don't pin the exact string, only
+    // that creation failed AND no public.users row leaked through.
     const supabase = getAdminSupabase()
     const email = uniqueTestEmail('no-name')
 

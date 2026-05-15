@@ -21,8 +21,7 @@ export default async function DashboardPage() {
     <section className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <p className="text-muted-foreground mt-2">
-        Signed in as <strong>{user.email}</strong>
-        {user.name ? ` (${user.name})` : ''}.
+        Signed in as <strong>{user.email}</strong> ({user.name}).
       </p>
       <form action={handleSignOut} className="mt-6">
         <button
