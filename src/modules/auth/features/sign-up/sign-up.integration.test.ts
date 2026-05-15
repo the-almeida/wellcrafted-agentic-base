@@ -54,6 +54,55 @@ describe('auth.users → public.users trigger', () => {
     })
   })
 
+  it('falls back to `full_name` when `name` is missing in metadata', async () => {
+    // Some OAuth providers (and admin.createUser callers) populate
+    // `full_name` instead of `name`. The trigger reads both, so the
+    // public.users mirror gets the right value either way. Verifies
+    // the COALESCE in supabase/migrations/..._full_name_fallback.sql.
+    const supabase = getAdminSupabase()
+    const email = uniqueTestEmail('fullname')
+
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { full_name: 'Felix Fullname' },
+    })
+    expect(error).toBeNull()
+    if (!data.user) throw new Error('user not returned')
+    createdUserIds.push(data.user.id)
+
+    const userId = UserIdSchema.parse(data.user.id)
+    const rows = await db.select().from(users).where(eq(users.id, userId))
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.name).toBe('Felix Fullname')
+  })
+
+  it('refuses to create a user when no name is provided (trigger guard)', async () => {
+    // Defense-in-depth invariant from #24: every code path that creates
+    // auth.users must supply a non-blank name. Supabase wraps the
+    // trigger's RAISE EXCEPTION as a generic "Database error" — we don't
+    // pin the exact string, only that creation failed AND no public.users
+    // row leaked through.
+    const supabase = getAdminSupabase()
+    const email = uniqueTestEmail('no-name')
+
+    const noMetadata = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+    })
+    expect(noMetadata.error).not.toBeNull()
+    expect(noMetadata.data.user).toBeNull()
+
+    const emptyName = await supabase.auth.admin.createUser({
+      email: uniqueTestEmail('blank-name'),
+      email_confirm: true,
+      user_metadata: { name: '   ' },
+    })
+    expect(emptyName.error).not.toBeNull()
+    expect(emptyName.data.user).toBeNull()
+  })
+
   it('carries name through password sign-up (anon-key signUp path)', async () => {
     // Mirrors what the browser sends via our auth-provider.supabase
     // adapter: `auth.signUp({ email, password, options: { data: { name } } })`.

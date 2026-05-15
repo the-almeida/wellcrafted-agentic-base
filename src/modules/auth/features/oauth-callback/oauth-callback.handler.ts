@@ -14,6 +14,14 @@ import { createSupabaseServerClient } from '../../adapters/supabase/server-clien
  *
  * Route handlers are auto-captured by Sentry via `instrumentation.ts` —
  * no `withErrorBoundary` wrapper here (that's for server actions only).
+ *
+ * Name invariant: the `on_auth_user_created` trigger (#24, see
+ * `supabase/migrations/..._users_sync_require_name.sql`) raises and
+ * rolls back the insert if the provider returned no `name` /
+ * `full_name`. In that case `exchangeCodeForSession` returns a generic
+ * "Database error" — we surface it as `oauth_failed` and the sign-in
+ * page shows a hint suggesting the user grant the profile permission
+ * and retry.
  */
 export async function exchangeOauthCode(code: string): Promise<Result<void, ExternalServiceError>> {
   const supabase = await createSupabaseServerClient()

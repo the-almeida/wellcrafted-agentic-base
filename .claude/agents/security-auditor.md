@@ -69,6 +69,15 @@ You are reviewing a code change with a security lens. Read the diff. For each ar
 - Are authenticated pages dynamic? (`force-dynamic` or relying on Server Actions)
 - No ISR on routes that can refresh sessions?
 
+## OAuth providers (manual smoke required)
+
+CI cannot exercise real Google or Facebook OAuth (rate limits, 2FA, unattended-headless friction). If this change touches OAuth callback handling, provider scopes, or redirect URIs:
+
+- Has the release-checklist Google smoke been run on staging? (`docs/dod.md` → Release checklist (auth))
+- Has the Facebook smoke been run on staging? Including the scope-denial path (`public_profile` denied) if relevant?
+- Do the provider consoles' authorized redirect URIs match the deployed callback URL exactly?
+- For new public endpoints without rate limiting: BLOCK MERGE (already covered above; restated because OAuth callbacks are anonymously callable)
+
 ## Dependency hygiene
 
 - Were new dependencies added? Are they from reputable sources?

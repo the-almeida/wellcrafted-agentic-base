@@ -27,6 +27,11 @@ export async function GET(request: Request) {
 
   const result = await exchangeOauthCode(parsed.data.code)
   if (!result.ok) {
+    // Includes the trigger-rejected "no name" case (Facebook scope
+    // denial, etc.) — Supabase wraps the trigger's RAISE EXCEPTION as
+    // a generic "Database error" so we can't distinguish it here. The
+    // /sign-in page shows a hint suggesting the user grant the
+    // profile permission and retry.
     return NextResponse.redirect(`${origin}/sign-in?error=oauth_failed`)
   }
 

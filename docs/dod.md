@@ -71,3 +71,12 @@ A feature or fix is done when ALL of these are true:
 - [ ] Conventional commit message via `/commit`
 - [ ] `CONTEXT.md` updated if a new domain term was introduced
 - [ ] ADR added if the decision is hard-to-reverse, surprising, AND a real tradeoff
+
+## Release checklist (auth)
+
+OAuth providers cannot be exercised in CI — Google and Facebook both rate-limit unattended traffic, require real user accounts, and are flaky under headless 2FA. The integration and e2e suites cover the parts of OAuth we own (input validation, the `exchangeCodeForSession` path, the same-origin `next` redirect). The provider round-trip itself must be smoked manually before any production deploy that touches auth.
+
+- [ ] Real Google sign-in against staging completes and lands the user on `/dashboard` with `public.users.name` populated from the Google profile
+- [ ] Real Facebook sign-in against staging completes the same flow. If the user denies the `public_profile` scope, the trigger rejects the insert and the app redirects to `/sign-in?error=oauth_failed`; the `AuthErrorBanner` hint about granting the profile permission is visible (#24)
+- [ ] Both providers' redirect URIs in the provider consoles match the deployed callback URL (`https://<host>/auth/callback`)
+- [ ] If `SUPABASE_AUTH_EXTERNAL_*` env vars changed, the Supabase project's auth settings reflect them
