@@ -23,6 +23,20 @@ export function getAdminSupabase(): SupabaseClient {
 }
 
 /**
+ * Anon-key Supabase client — same posture as the browser. Used to
+ * exercise public auth flows (signUp, signInWithOtp) end-to-end and
+ * verify the contract between our request payloads and the trigger.
+ *
+ * Each call returns a fresh client so tests can't share auth state by
+ * accident.
+ */
+export function createAnonSupabase(): SupabaseClient {
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+/**
  * Generates a unique `.integration.test` email per test.
  *
  * The `.test` TLD is reserved (RFC 6761) and never resolves on the
