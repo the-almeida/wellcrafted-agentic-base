@@ -33,3 +33,4 @@ export { requireUser } from './require-user'
 export { updateSession } from './adapters/supabase/update-session'
 
 export { exchangeOauthCode } from './features/oauth-callback/oauth-callback.handler'
+export { oauthCallbackInputSchema } from './features/oauth-callback/oauth-callback.schema'

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { exchangeOauthCode } from '@/modules/auth'
+import { exchangeOauthCode, oauthCallbackInputSchema } from '@/modules/auth'
 
 /**
  * OAuth callback. Providers (Google, Facebook) redirect here with
@@ -8,22 +8,27 @@ import { exchangeOauthCode } from '@/modules/auth'
  * code for a Supabase session — which writes auth cookies on the app
  * origin — then send the user to `?next=<path>` (or `/dashboard`).
  *
- * On failure (missing code, exchange rejected) we redirect back to
+ * On failure (invalid input, exchange rejected) we redirect back to
  * `/sign-in` with an `error` query so the form can show a message.
+ *
+ * `next` is validated as a same-origin path to prevent open redirects:
+ * see `oauth-callback.schema.ts`.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
 
-  if (!code) {
-    return NextResponse.redirect(`${origin}/sign-in?error=missing_code`)
+  const parsed = oauthCallbackInputSchema.safeParse({
+    code: searchParams.get('code') ?? undefined,
+    next: searchParams.get('next') ?? undefined,
+  })
+  if (!parsed.success) {
+    return NextResponse.redirect(`${origin}/sign-in?error=invalid_callback`)
   }
 
-  const result = await exchangeOauthCode(code)
+  const result = await exchangeOauthCode(parsed.data.code)
   if (!result.ok) {
     return NextResponse.redirect(`${origin}/sign-in?error=oauth_failed`)
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  return NextResponse.redirect(`${origin}${parsed.data.next}`)
 }
