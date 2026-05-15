@@ -54,8 +54,12 @@ export const authProvider: AuthProvider = {
     })
     if (error) {
       // Supabase returns "Signups not allowed for otp" when the email is
-      // not registered and shouldCreateUser=false. Surface as
-      // UnauthenticatedError so the UI can show "no account for that email."
+      // not registered and shouldCreateUser=false. We surface this
+      // verbatim, which means a caller can probe whether an email is
+      // registered. Accepted trade-off — see `docs/conventions.md` →
+      // "Auth: accepted trade-offs". If your project handles sensitive
+      // accounts, normalize this to always return ok(undefined) and
+      // show a generic "if an account exists, we sent a code" message.
       return err(new UnauthenticatedError(error.message, { cause: error }))
     }
     return ok(undefined)

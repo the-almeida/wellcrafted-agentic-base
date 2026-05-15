@@ -88,10 +88,16 @@ Scope when meaningful (module name): `feat(auth): add magic link sign-in`.
 
 Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything callable by anonymous users) MUST be rate-limited before going to production.
 
-- Per-IP and per-account limits where applicable
+- Per-IP and per-email limits where applicable; per-IP alone lets one bot saturate a single email's bucket, per-email alone lets an attacker scrape by varying emails. Wire both
 - Supabase Auth provides built-in rate limiting on its endpoints; the scaffold's auth flows benefit from that automatically. New public endpoints do NOT inherit this protection
-- The `src/shared/lib/rate-limit/` folder is a skeleton. Implementation depends on infrastructure (Upstash Redis, Vercel KV, in-memory for single-instance). Decide once, document, apply consistently
+- `src/shared/lib/rate-limit/` ships a working implementation: Vercel Marketplace Redis when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are set (auto-injected by Vercel when you provision a Redis store), otherwise an in-memory fallback that warns once on startup. The in-memory backend resets on restart and doesn't share state across replicas — fine for local dev, not safe for multi-instance production
 - The DoD verifies rate limiting on new public endpoints
+
+## Auth: accepted trade-offs
+
+These are deliberate choices the boilerplate makes that a downstream project may want to revisit:
+
+- **Account enumeration via OTP sign-in.** When a user requests an OTP code for an unregistered email, `requestSignInOtp` returns a specific Supabase error ("Signups not allowed for otp") that the form surfaces verbatim. An attacker can probe which emails are registered by reading this response. We accept this because (1) precise error UX helps the common case of typo'd emails, and (2) for the boilerplate's low-stakes default audience, enumeration isn't a primary threat. **If your project handles sensitive accounts (financial, medical, social-graph, anything where "X has an account here" is itself confidential), normalize `requestSignInOtp` to always return `ok(undefined)` and show a generic "If an account exists, we sent a code" message.** Per-IP rate limiting (already in place) blunts mass enumeration but does not eliminate it.
 
 ## Accessibility
 
