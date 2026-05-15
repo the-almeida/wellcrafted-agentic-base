@@ -46,6 +46,40 @@ export const authProvider: AuthProvider = {
     }
     return identityFromUser(data.user)
   },
+  async requestSignInOtp({ email }) {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    })
+    if (error) {
+      // Supabase returns "Signups not allowed for otp" when the email is
+      // not registered and shouldCreateUser=false. Surface as
+      // UnauthenticatedError so the UI can show "no account for that email."
+      return err(new UnauthenticatedError(error.message, { cause: error }))
+    }
+    return ok(undefined)
+  },
+  async requestSignUpOtp({ email, name }) {
+    const supabase = await createSupabaseServerClient()
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { data: { name }, shouldCreateUser: true },
+    })
+    if (error) {
+      return err(new ExternalServiceError('supabase', error.message, { cause: error }))
+    }
+    return ok(undefined)
+  },
+  async verifyOtp({ email, token }) {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    if (error) return err(new UnauthenticatedError(error.message, { cause: error }))
+    if (!data.user) {
+      return err(new UnauthenticatedError('verifyOtp did not return a user'))
+    }
+    return identityFromUser(data.user)
+  },
   async signOut() {
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.auth.signOut()

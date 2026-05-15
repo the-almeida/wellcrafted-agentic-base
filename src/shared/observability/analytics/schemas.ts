@@ -4,10 +4,10 @@ import { Events } from './events'
 
 export const eventSchemas = {
   [Events.USER_SIGNED_UP]: z.object({
-    method: z.enum(['email', 'google', 'facebook']),
+    method: z.enum(['email', 'otp', 'google', 'facebook']),
   }),
   [Events.USER_SIGNED_IN]: z.object({
-    method: z.enum(['email', 'google', 'facebook']),
+    method: z.enum(['email', 'otp', 'google', 'facebook']),
   }),
   [Events.USER_SIGNED_OUT]: z.object({}),
   [Events.CRITICAL_ERROR_SHOWN]: z.object({

@@ -19,6 +19,9 @@ export type { Role, User } from './domain/user'
 
 export { createSupabaseBrowserClient } from './adapters/supabase/browser-client'
 
+export { requestSignInOtp } from './features/request-sign-in-otp/request-sign-in-otp.handler'
+export { requestSignUpOtp } from './features/request-sign-up-otp/request-sign-up-otp.handler'
 export { signIn } from './features/sign-in/sign-in.handler'
 export { signOut } from './features/sign-out/sign-out.handler'
 export { signUp } from './features/sign-up/sign-up.handler'
+export { verifyOtp } from './features/verify-otp/verify-otp.handler'
