@@ -45,6 +45,11 @@ const serverShape = {
   KV_REST_API_URL: optionalUrl,
   KV_REST_API_TOKEN: optionalString,
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  // Grace period in days before a soft-deleted account is purged by
+  // `purge_expired_account_deletions()`. Users can cancel the deletion at
+  // any point during this window. Stored as a string in `process.env`;
+  // `z.coerce.number()` converts and validates.
+  ACCOUNT_DELETION_GRACE_DAYS: z.coerce.number().int().positive().default(30),
 }
 
 const serverSchema = z.object(serverShape)

@@ -8,6 +8,13 @@
       "when": 1778861056380,
       "tag": "20260515160416_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778865960169,
+      "tag": "20260515172600_add_account_deletion_requests",
+      "breakpoints": true
     }
   ]
 }

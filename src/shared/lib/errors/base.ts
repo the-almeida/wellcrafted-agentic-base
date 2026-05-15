@@ -56,6 +56,17 @@ export class ConflictError extends AppError {
   }
 }
 
+export class AccountPendingDeletionError extends AppError {
+  readonly code = 'ACCOUNT_PENDING_DELETION' as const
+  constructor(
+    public readonly scheduledFor: Date,
+    message = 'Account is scheduled for deletion',
+    options?: { cause?: unknown },
+  ) {
+    super(message, options)
+  }
+}
+
 export class ExternalServiceError extends AppError {
   readonly code = 'EXTERNAL_SERVICE_ERROR' as const
   constructor(
@@ -73,4 +84,5 @@ export type AppErrorCode =
   | UnauthenticatedError['code']
   | ForbiddenError['code']
   | ConflictError['code']
+  | AccountPendingDeletionError['code']
   | ExternalServiceError['code']

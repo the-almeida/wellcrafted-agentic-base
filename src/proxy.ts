@@ -9,6 +9,12 @@ import { updateSession } from '@/modules/auth'
 // ban (scripts/check-no-edge.sh) covers individual routes.
 
 export async function proxy(request: NextRequest) {
+  // Inject the request pathname into the request headers BEFORE
+  // updateSession constructs the NextResponse. Server Components read it
+  // via `headers().get('x-pathname')`; Next.js does not otherwise pass
+  // the pathname to layouts/pages.
+  request.headers.set('x-pathname', request.nextUrl.pathname)
+
   const response = await updateSession(request)
 
   const requestId = request.headers.get('x-request-id') ?? randomUUID()

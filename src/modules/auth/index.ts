@@ -28,9 +28,20 @@ export { isAdmin } from './domain/policy'
 export type { Role, User } from './domain/user'
 
 export { getOptionalUser } from './get-optional-user'
-export { requireUser } from './require-user'
+export { requireUser, requireUserAllowPendingDeletion } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
+
+export { cancelAccountDeletion } from './features/account-deletion/cancel-account-deletion.handler'
+export { handleFacebookDataDeletion } from './features/account-deletion/facebook-data-deletion'
+export { findDeletionRequestByCode } from './features/account-deletion/find-deletion-request-by-code'
+export { getActiveDeletionRequest } from './features/account-deletion/get-active-deletion-request'
+export { requestAccountDeletion } from './features/account-deletion/request-account-deletion.handler'
+export {
+  ACCOUNT_HOME_PATH,
+  PENDING_DELETION_PATH,
+  resolveProtectedRouteRedirect,
+} from './features/account-deletion/resolve-protected-redirect'
 
 export { exchangeOauthCode } from './features/oauth-callback/oauth-callback.handler'
 export { oauthCallbackInputSchema } from './features/oauth-callback/oauth-callback.schema'
