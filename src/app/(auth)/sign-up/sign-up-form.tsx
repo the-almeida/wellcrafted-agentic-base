@@ -19,13 +19,9 @@ export function SignUpForm() {
         const formData = new FormData(e.currentTarget)
         const email = String(formData.get('email') ?? '')
         const password = String(formData.get('password') ?? '')
-        const nameValue = String(formData.get('name') ?? '').trim()
+        const name = String(formData.get('name') ?? '').trim()
         startTransition(async () => {
-          const result = await signUp({
-            email,
-            password,
-            name: nameValue ? nameValue : undefined,
-          })
+          const result = await signUp({ email, password, name })
           if (!result.ok) {
             setError(result.error.message)
             return
@@ -36,12 +32,14 @@ export function SignUpForm() {
       }}
     >
       <label htmlFor="name" className="flex flex-col gap-1 text-sm">
-        Name (optional)
+        Name
         <input
           id="name"
           name="name"
           type="text"
+          required
           autoComplete="name"
+          minLength={1}
           maxLength={120}
           className="border-border bg-background rounded border px-3 py-2"
         />

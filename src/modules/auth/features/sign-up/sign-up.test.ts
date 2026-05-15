@@ -12,19 +12,28 @@ describe('signUpSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('accepts valid input without name', () => {
+  it('rejects when name is missing', () => {
     const result = signUpSchema.safeParse({
       email: 'alice@example.com',
       password: 'password123',
     })
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
-  it('rejects an empty name when provided', () => {
+  it('rejects an empty name', () => {
     const result = signUpSchema.safeParse({
       email: 'alice@example.com',
       password: 'password123',
       name: '',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a whitespace-only name', () => {
+    const result = signUpSchema.safeParse({
+      email: 'alice@example.com',
+      password: 'password123',
+      name: '   ',
     })
     expect(result.success).toBe(false)
   })

@@ -36,7 +36,7 @@ export const authProvider: AuthProvider = {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: name ? { name } : undefined },
+      options: { data: { name } },
     })
     if (error) {
       return err(new ExternalServiceError('supabase', error.message, { cause: error }))
