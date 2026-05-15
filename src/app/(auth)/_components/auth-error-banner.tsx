@@ -39,6 +39,9 @@ function resolveMessage(error: string, context: Context): string | null {
   if (error === 'invalid_callback') {
     return 'The sign-in link was invalid or expired. Please try again.'
   }
+  if (error === 'too_many_attempts') {
+    return 'Too many attempts. Please wait a minute and try again.'
+  }
   if (error === 'oauth_failed') {
     if (context === 'sign-up') {
       return 'Sign-up failed. If you used Google or Facebook, make sure you granted permission to share your name — that field is required to create an account.'

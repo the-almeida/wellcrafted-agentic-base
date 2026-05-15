@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+import { extractIpFromHeaders } from '@/shared/lib/http/request-ip'
+import { rateLimit } from '@/shared/lib/rate-limit'
+
 import { exchangeOauthCode, oauthCallbackInputSchema } from '@/modules/auth'
 
 /**
@@ -14,9 +17,20 @@ import { exchangeOauthCode, oauthCallbackInputSchema } from '@/modules/auth'
  * permission (likely cause for first-time users hitting #24's trigger
  * rejection); `/sign-in` shows neutral retry copy. The `from` value is
  * allow-listed in the schema to prevent open-redirect abuse.
+ *
+ * Per-IP rate-limited (60s window, 30 callbacks). No email available at
+ * this stage, so IP is the only key. Generous limit because legitimate
+ * users hit this once per sign-in; lower limits would punish corporate
+ * NATs without buying meaningful protection.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
+
+  const ip = extractIpFromHeaders(request.headers)
+  const ipLimit = await rateLimit(`oauth-callback:ip:${ip}`, { windowMs: 60_000, max: 30 })
+  if (!ipLimit.ok) {
+    return NextResponse.redirect(`${origin}/sign-in?error=too_many_attempts`)
+  }
 
   const parsed = oauthCallbackInputSchema.safeParse({
     code: searchParams.get('code') ?? undefined,

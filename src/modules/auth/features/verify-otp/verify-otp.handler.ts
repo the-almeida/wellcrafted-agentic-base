@@ -2,6 +2,7 @@
 
 import { ValidationError } from '@/shared/lib/errors/base'
 import { withErrorBoundary } from '@/shared/lib/errors/with-error-boundary'
+import { getRequestIp } from '@/shared/lib/http/request-ip'
 import { rateLimit } from '@/shared/lib/rate-limit'
 import { err } from '@/shared/lib/result'
 
@@ -25,11 +26,14 @@ export const verifyOtp = withErrorBoundary(async (raw: unknown) => {
     return err(new ValidationError(parsed.error.flatten()))
   }
 
-  const limited = await rateLimit(`otp-verify:${parsed.data.email}`, {
+  const emailLimit = await rateLimit(`otp-verify:email:${parsed.data.email}`, {
     windowMs: 60_000,
     max: 10,
   })
-  if (!limited.ok) return limited
+  if (!emailLimit.ok) return emailLimit
+  const ip = await getRequestIp()
+  const ipLimit = await rateLimit(`otp-verify:ip:${ip}`, { windowMs: 60_000, max: 50 })
+  if (!ipLimit.ok) return ipLimit
 
   return authProvider.verifyOtp({
     email: parsed.data.email,
