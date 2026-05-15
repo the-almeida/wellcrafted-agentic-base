@@ -3,6 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+
 import { verifyOtp } from '@/modules/auth/client'
 
 type Props = {
@@ -37,9 +41,9 @@ export function OtpVerifyForm({ email, onBack }: Props) {
       <p className="text-muted-foreground text-sm">
         We sent a 6-digit code to <span className="text-foreground font-medium">{email}</span>.
       </p>
-      <label htmlFor="token" className="flex flex-col gap-1 text-sm">
-        6-digit code
-        <input
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="token">6-digit code</Label>
+        <Input
           id="token"
           name="token"
           type="text"
@@ -49,29 +53,20 @@ export function OtpVerifyForm({ email, onBack }: Props) {
           pattern="\d{6}"
           minLength={6}
           maxLength={6}
-          className="border-border bg-background rounded border px-3 py-2 tracking-widest"
+          className="tracking-widest"
         />
-      </label>
+      </div>
       {error ? (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
-      >
+      <Button type="submit" disabled={isPending}>
         {isPending ? 'Verifying…' : 'Verify'}
-      </button>
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={isPending}
-        className="text-muted-foreground text-xs underline disabled:opacity-60"
-      >
+      </Button>
+      <Button type="button" variant="link" size="sm" onClick={onBack} disabled={isPending}>
         Use a different email
-      </button>
+      </Button>
     </form>
   )
 }

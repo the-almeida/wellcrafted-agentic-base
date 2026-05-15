@@ -3,6 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+
 import { requestSignInOtp, signIn } from '@/modules/auth/client'
 
 import { AuthDivider } from '../_components/auth-divider'
@@ -64,53 +68,42 @@ export function SignInForm() {
           })
         }}
       >
-        <label htmlFor="email" className="flex flex-col gap-1 text-sm">
-          Email
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="border-border bg-background rounded border px-3 py-2"
-          />
-        </label>
-        <label htmlFor="password" className="flex flex-col gap-1 text-sm">
-          Password
-          <input
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" required autoComplete="email" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="password">Password</Label>
+          <Input
             id="password"
             name="password"
             type="password"
             required
             autoComplete="current-password"
             minLength={8}
-            className="border-border bg-background rounded border px-3 py-2"
           />
-        </label>
+        </div>
         {error ? (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-destructive text-sm">
             {error}
           </p>
         ) : null}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
-        >
+        <Button type="submit" disabled={isPending}>
           {isPending ? 'Signing in…' : 'Sign in'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={(e) => {
             const form = e.currentTarget.closest('form')
             const email = String(new FormData(form ?? undefined).get('email') ?? '')
             onSendCode(email)
           }}
           disabled={isPending}
-          className="text-muted-foreground text-xs underline disabled:opacity-60"
         >
           Or send me a 6-digit code instead
-        </button>
+        </Button>
       </form>
     </div>
   )

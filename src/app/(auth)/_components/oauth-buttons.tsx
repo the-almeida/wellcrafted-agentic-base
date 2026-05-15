@@ -1,5 +1,7 @@
 'use client'
 
+import { Button } from '@/shared/ui/button'
+
 import { createSupabaseBrowserClient } from '@/modules/auth/client'
 
 type Props = {
@@ -31,22 +33,17 @@ export function OAuthButtons({ disabled, next = '/dashboard', originPath, onErro
 
   return (
     <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={() => onOAuth('google')}
-        disabled={disabled}
-        className="border-border rounded-md border px-3 py-2 text-sm disabled:opacity-60"
-      >
+      <Button type="button" variant="outline" onClick={() => onOAuth('google')} disabled={disabled}>
         Continue with Google
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="outline"
         onClick={() => onOAuth('facebook')}
         disabled={disabled}
-        className="border-border rounded-md border px-3 py-2 text-sm disabled:opacity-60"
       >
         Continue with Facebook
-      </button>
+      </Button>
     </div>
   )
 }
