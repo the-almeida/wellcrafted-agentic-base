@@ -1,27 +1,44 @@
 # Rate limit
 
-Skeleton. Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything callable by anonymous users) MUST be rate-limited before going to production.
+Public endpoints (sign-in, sign-up, OTP request/verify, OAuth callback, webhook receivers, anything callable by anonymous users) MUST be rate-limited. The boilerplate enforces this via `rateLimit(key, config)` and the DoD verifies new handlers wire it in.
 
-The implementation is intentionally deferred — the right backing store depends on the deployment story:
+## Backends
 
-- **Upstash Redis** — best for serverless/multi-region (Vercel, Cloudflare). Single source of truth, low latency from edge.
-- **Vercel KV** — fine if already on Vercel; same Redis underneath.
-- **In-memory (LRU)** — only useful for single-instance deploys; resets on restart and doesn't share state across replicas.
+Two backends, selected automatically by environment:
 
-Decide once, document, apply consistently. Wire decisions through `rateLimit(key, config)`; do not introduce a second helper.
+- **Vercel Marketplace Redis** (branded "Vercel KV") — used when `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set. This is the production-ready path. The Vercel dashboard auto-injects both vars when you provision a Redis store from Marketplace. Storage is the Vercel-provisioned Redis; the client is `@upstash/redis` because Vercel deprecated `@vercel/kv`.
+- **In-memory `Map`** — used when those vars are absent. Resets on restart, doesn't share state across replicas. Fine for local dev; **not safe** for multi-instance production. A one-time `console.warn` logs at module load when this backend is active.
 
-The function signature is stable today; callers can already wrap public endpoints. The current implementation is a no-op (returns `ok(undefined)`) so behavior is preserved until the real backing store lands.
+The algorithm is fixed-window: `INCR` + set TTL on the first increment + compare against `max`. Sliding-window would be marginally more accurate but the extra code isn't worth it for the boilerplate's threat model.
 
 ## Usage
 
 ```ts
-import { rateLimit, RateLimitExceededError } from '@/shared/lib/rate-limit'
-import { err } from '@/shared/lib/result'
+import { rateLimit } from '@/shared/lib/rate-limit'
 
-const limit = await rateLimit(`sign-in:${ip}`, { windowMs: 60_000, max: 5 })
-if (!limit.ok) return limit // RateLimitExceededError
+const limit = await rateLimit(`otp-sign-in:email:${email}`, {
+  windowMs: 60_000,
+  max: 5,
+})
+if (!limit.ok) return limit
 ```
 
-## DoD
+Wire **both** per-email and per-IP limits where the endpoint takes an email (sign-in, sign-up, OTP request/verify). Per-email alone lets an attacker enumerate by varying the email; per-IP alone lets a botnet split the load.
 
-Definition of Done verifies new public endpoints call `rateLimit` before any work. See `docs/dod.md`.
+## Deploying to Vercel
+
+1. Storage → Marketplace → choose a Redis offering (e.g. Upstash).
+2. Connect it to the project; Vercel auto-injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+3. Redeploy. The module switches to the Redis backend on the next cold start; the warning disappears from logs.
+
+Free Hobby tier covers low-traffic projects. Check [vercel.com/pricing](https://vercel.com/pricing) for current limits.
+
+## Deploying elsewhere
+
+The Redis backend reads any Redis-compatible REST URL/token, so Upstash directly (without Vercel) works the same way — set `KV_REST_API_URL` and `KV_REST_API_TOKEN` to your Upstash REST credentials.
+
+For non-serverless single-instance deploys (e.g. a VPS), the in-memory backend is acceptable; just be aware of the restart-resets-state caveat.
+
+## Tests
+
+`index.test.ts` covers the in-memory backend exhaustively: fresh keys, over-limit rejection, window reset, key isolation, no-implicit-reset on rejection. The Redis backend is trusted-without-test — the implementation is a thin `INCR` / `PEXPIRE` / compare; the parts that could fail (network, TTL semantics) belong to Redis itself, not us.

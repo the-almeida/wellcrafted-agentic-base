@@ -38,6 +38,12 @@ const serverShape = {
   GOOGLE_OAUTH_CLIENT_SECRET: optionalString,
   FACEBOOK_OAUTH_CLIENT_ID: optionalString,
   FACEBOOK_OAUTH_CLIENT_SECRET: optionalString,
+  // Vercel Marketplace Redis (the "Vercel KV" branding). Auto-injected
+  // when you provision a Redis store from the Vercel dashboard. Both
+  // optional — when absent, rate-limit falls back to an in-memory
+  // counter (dev-friendly; not safe for multi-instance prod).
+  KV_REST_API_URL: optionalUrl,
+  KV_REST_API_TOKEN: optionalString,
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 }
 
