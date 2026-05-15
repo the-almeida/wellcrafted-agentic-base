@@ -2,29 +2,26 @@ import { randomUUID } from 'node:crypto'
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import { env } from '@/shared/lib/env'
+
 import { test as base } from './axe'
 
 /**
- * E2E helpers for the auth flows. Deliberately self-contained — does
- * not import from `src/` so the e2e suite respects the modular
- * monolith's boundary (e2e lives outside the application module
- * graph). The shape mirrors `src/shared/db/test-helpers.ts` but at the
- * Playwright surface.
+ * E2E helpers for the auth flows. Mirrors the shape of
+ * `src/shared/db/test-helpers.ts` at the Playwright surface — kept
+ * separate because the integration-test helpers run inside vitest's
+ * Node worker, while these run inside Playwright's worker.
+ *
+ * `playwright.config.ts` loads `.env.local` into `process.env` before
+ * the env module's startup validation runs, so importing `env` here is
+ * safe and identical to the in-app env access.
  */
 
 let adminClient: SupabaseClient | null = null
 
 function getAdmin(): SupabaseClient {
   if (adminClient) return adminClient
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error(
-      'e2e: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set ' +
-        '(loaded from .env.local by playwright.config.ts).',
-    )
-  }
-  adminClient = createClient(url, serviceKey, {
+  adminClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
   return adminClient
