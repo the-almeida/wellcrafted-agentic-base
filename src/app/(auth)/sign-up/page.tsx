@@ -24,7 +24,7 @@ export default async function SignUpPage({ searchParams }: Props) {
           .
         </p>
       </header>
-      <AuthErrorBanner error={error} />
+      <AuthErrorBanner error={error} context="sign-up" />
       <SignUpForm />
     </div>
   )

@@ -43,7 +43,7 @@ export function SignUpForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <OAuthButtons disabled={isPending} onError={onError} />
+      <OAuthButtons disabled={isPending} originPath="/sign-up" onError={onError} />
       <AuthDivider />
       <form
         className="flex flex-col gap-4"

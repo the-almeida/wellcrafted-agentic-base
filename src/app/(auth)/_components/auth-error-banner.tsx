@@ -1,24 +1,29 @@
+type Context = 'sign-in' | 'sign-up'
+
 type Props = {
   error: string | undefined
-}
-
-const MESSAGES: Record<string, string> = {
-  oauth_failed:
-    'Sign-in failed. If you used Google or Facebook, make sure you granted permission to share your name — that field is required to create an account.',
-  invalid_callback: 'The sign-in link was invalid or expired. Please try again.',
+  context: Context
 }
 
 /**
  * Server-rendered banner shown above the auth forms when a redirect
- * brought the user back with `?error=…`. Kept presentational so the
- * `oauth_failed` copy stays in one place — it's the catch-all for
- * provider/trigger rejections (including #24's scope-denial case)
- * because Supabase swallows trigger RAISE EXCEPTION messages and
- * surfaces them as a generic "Database error".
+ * brought the user back with `?error=…`.
+ *
+ * Copy varies by context:
+ * - On /sign-up: the profile-permission hint is shown for
+ *   `oauth_failed` because most failures here are first-time users
+ *   tripping the trigger's name-required guard (Facebook with
+ *   `public_profile` denied, similar Google cases).
+ * - On /sign-in: returning users hitting `oauth_failed` aren't usually
+ *   missing a profile scope — show a neutral retry message instead.
+ *
+ * Supabase wraps the trigger's RAISE EXCEPTION as a generic "Database
+ * error" so we can't distinguish the cause from the error string;
+ * pivoting on the originating page is the next best signal.
  */
-export function AuthErrorBanner({ error }: Props) {
+export function AuthErrorBanner({ error, context }: Props) {
   if (!error) return null
-  const message = MESSAGES[error]
+  const message = resolveMessage(error, context)
   if (!message) return null
   return (
     <p
@@ -28,4 +33,17 @@ export function AuthErrorBanner({ error }: Props) {
       {message}
     </p>
   )
+}
+
+function resolveMessage(error: string, context: Context): string | null {
+  if (error === 'invalid_callback') {
+    return 'The sign-in link was invalid or expired. Please try again.'
+  }
+  if (error === 'oauth_failed') {
+    if (context === 'sign-up') {
+      return 'Sign-up failed. If you used Google or Facebook, make sure you granted permission to share your name — that field is required to create an account.'
+    }
+    return 'Sign-in failed. Please try again or use a different method.'
+  }
+  return null
 }

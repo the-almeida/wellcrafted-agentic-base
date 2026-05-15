@@ -8,7 +8,11 @@ describe('oauthCallbackInputSchema', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).toEqual({ code: 'valid-code-abc123', next: '/dashboard' })
+      expect(result.data).toEqual({
+        code: 'valid-code-abc123',
+        next: '/dashboard',
+        from: '/sign-in',
+      })
     }
   })
 
@@ -77,5 +81,34 @@ describe('oauthCallbackInputSchema', () => {
       next: 'dashboard',
     })
     expect(result.success).toBe(false)
+  })
+
+  it('defaults `from` to /sign-in when not provided', () => {
+    const result = oauthCallbackInputSchema.safeParse({ code: 'valid-code' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.from).toBe('/sign-in')
+    }
+  })
+
+  it('accepts `from=/sign-up`', () => {
+    const result = oauthCallbackInputSchema.safeParse({
+      code: 'valid-code',
+      from: '/sign-up',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.from).toBe('/sign-up')
+    }
+  })
+
+  it('rejects `from` values outside the allow-list (open-redirect guard)', () => {
+    for (const hostile of ['/dashboard', 'https://evil.com', '/sign-in/../etc', '//evil.com']) {
+      const result = oauthCallbackInputSchema.safeParse({
+        code: 'valid-code',
+        from: hostile,
+      })
+      expect(result.success, `expected reject for from=${hostile}`).toBe(false)
+    }
   })
 })
