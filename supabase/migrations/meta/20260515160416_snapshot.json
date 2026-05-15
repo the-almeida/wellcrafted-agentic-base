@@ -1,5 +1,5 @@
 {
-  "id": "be2fec55-d4cf-48f2-87d5-f4ee33d9389e",
+  "id": "f3f07c85-b1be-488f-8d89-0c71f994ebab",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -24,7 +24,7 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "role": {
           "name": "role",
@@ -54,7 +54,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "users_name_not_blank": {
+          "name": "users_name_not_blank",
+          "value": "btrim(\"users\".\"name\") <> ''"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.example_entities": {

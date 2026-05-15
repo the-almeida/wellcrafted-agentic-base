@@ -76,7 +76,7 @@ Drizzle owns table structure. Supabase CLI owns RLS, triggers, functions, and ex
 Workflow for adding a new table that also needs RLS:
 
 1. Edit the Drizzle schema in `src/shared/db/schema/`
-2. `pnpm db:generate` — Drizzle emits SQL into `supabase/migrations/` with the Supabase timestamp prefix
+2. `pnpm db:generate --name <descriptive_slug>` — Drizzle emits SQL into `supabase/migrations/` with the Supabase timestamp prefix. Always pass `--name` so the migration file reads `<timestamp>_add_audit_log.sql` rather than `<timestamp>_smiling_silhouette.sql` (Drizzle's random-slug default)
 3. `supabase migration new <name>` — hand-author the RLS / trigger SQL (its later timestamp means it runs after the Drizzle file)
 4. `supabase db reset` — drops the local DB and re-applies the whole sequence in order, proving Drizzle output and hand-authored SQL compose cleanly
 5. Commit both migration files in the same commit

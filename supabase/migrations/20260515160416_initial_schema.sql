@@ -2,10 +2,11 @@ CREATE TYPE "public"."user_role" AS ENUM('user', 'admin');--> statement-breakpoi
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"email" text NOT NULL,
-	"name" text,
+	"name" text NOT NULL,
 	"role" "user_role" DEFAULT 'user' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "users_name_not_blank" CHECK (btrim("users"."name") <> '')
 );
 --> statement-breakpoint
 CREATE TABLE "example_entities" (

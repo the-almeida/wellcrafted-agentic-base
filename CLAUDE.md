@@ -161,7 +161,7 @@ For changes touching auth, authorization, payments, or PII handling: invoke `@se
 - `pnpm e2e:full` — full e2e
 - `pnpm typecheck`
 - `pnpm lint`
-- `pnpm db:generate` — generate Drizzle migration from schema diff
+- `pnpm db:generate --name <descriptive_slug>` — generate Drizzle migration from schema diff. Always pass `--name` so filenames are descriptive (`<timestamp>_add_audit_log.sql`), not Drizzle's random-slug default
 - `pnpm db:migrate` — apply migrations
 
 ## Definition of Done
