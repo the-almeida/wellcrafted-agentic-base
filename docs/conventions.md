@@ -28,6 +28,81 @@
 - Test name describes behavior, not implementation
 - Reads like a spec: "user can sign in with valid credentials"
 
+## Test quality
+
+A test is a falsifiable claim about behavior. If no realistic bug could flip it from green to red, it is decoration, not protection. This section is the project's canon on what makes a test load-bearing; `@test-auditor` enforces it after each GREEN cycle of `/tdd`.
+
+### Principles
+
+The agent reads from these principles directly; the checklist below is illustrative, not a substitute for judgment.
+
+1. **Falsifiable.** Before writing a test, name a one-line change to the code being tested that this test would catch. If you can't, do not write the test.
+2. **Caller's language.** Tests describe behavior at the public interface (HTTP, Server Action, exported function, rendered UI). Internal names, private functions, or private state in a test name or assertion is a signal the test is brittle and will break on refactor.
+3. **One diagnostic reason to fail.** A failing test should point at one behavior. If a test can fail for three unrelated reasons, split it.
+4. **Every line earns its place.** Setup, action, and assertion lines must each be load-bearing for the behavior being tested. A fixture value that the code under test never reads, a `fill` that satisfies validation the action does not trigger, a header that no handler inspects — these are evasive lines (see `CONTEXT.md`).
+5. **Specific to regressions, robust to refactor.** Assertions narrow enough that a real regression breaks them, wide enough that legitimate refactors don't. `.toBeTruthy()` rarely passes the first half; full-DOM snapshots rarely pass the second.
+6. **Passes for the right reason.** Green is necessary, not sufficient. Verify the code path implied by the test was actually exercised. The RED failure message is the primary cross-check: GREEN must resolve the same reason RED failed.
+7. **I/O sources are controlled.** Time, randomness, and external state are the three flake sources. `waitForTimeout` used as a substitute for waiting on a deterministic ready signal is a band-aid that ages into a flake.
+8. **Cost-of-change lives in production code, not tests.** If a test forced you to add a flag, field, or branch the production code didn't otherwise need, the test design is suspect. Tests describe consumer-facing behavior; if no consumer needs the new flag, the test invented a fake consumer.
+
+### Evasive-test patterns
+
+These are the concrete patterns `@test-auditor` flags. Each violates one or more principles above. The heuristic ID is the value used in `// @test-auditor-allow: <id> — <reason>` overrides.
+
+| ID                    | Pattern                                                                                                                                                               | Principle |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `setup-not-justified` | Setup line whose value never appears in the action or the assertion. The line was added to get past something that turned out not to block the test.                  | 4         |
+| `red-green-mismatch`  | GREEN passes but the code path the test claims to exercise is not actually touched by the GREEN diff. Test is green for an unrelated reason.                          | 6         |
+| `noop-negative`       | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has never rendered in any prior state of this test. The negative assertion was never going to fail anyway. | 1         |
+| `wide-mouth`          | `.toBeTruthy()`, `.toBeDefined()`, `expect(spy).toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check. Asserts something is "anything."      | 5         |
+| `swallowed-failure`   | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion. The failure path is hidden from the test runner.                | 3         |
+| `internal-mock`       | Mocking the code being tested or its internal (non-port) collaborator. (Already a hard rule in `/tdd`; the agent re-verifies by reading code.)                        | 2         |
+| `sleep-band-aid`      | `waitForTimeout` used to wait for state that has a deterministic ready signal.                                                                                        | 7         |
+| `assertion-on-bug`    | Assertion text comes from a known error/regression path rather than a positive spec. Fixing the regression makes the assertion silently true.                         | 1         |
+| `skip-or-only`        | `.skip` / `.only` / `xit` / `fit` left in the test file.                                                                                                              | —         |
+
+### Worked example: the OTP dummy-password case
+
+The canonical evasive test in this repo (now fixed) lived in `e2e/full/auth-otp.spec.ts`:
+
+```ts
+await page.goto('/sign-in')
+await page.getByLabel('Email').fill(email)
+// Password is required by HTML; fill a dummy so the form validates
+// through to the OTP button without blocking on `required`.
+await page.getByLabel('Password').fill('not-used-for-otp-flow')
+await page.getByRole('button', { name: 'Or send me a 6-digit code instead' }).click()
+```
+
+The comment is a confident, plausible-sounding diagnosis. It is also wrong. The OTP button is declared `type="button"` in `sign-in-form.tsx`, so clicking it never triggers HTML5 form validation. The password fill is solving a problem that does not exist. The two sibling OTP tests in the same file don't fill the password field and pass fine — that was the cross-check that should have flipped a yellow flag, but didn't.
+
+This is `setup-not-justified` (principle 4): a value the form never reads. It also illustrates a broader failure mode worth naming explicitly: **a workaround for a misdiagnosed problem ossifies behind a confident comment**. When you find yourself writing a comment that explains why a test step is necessary, delete the step and re-run. If the test still passes, the step was evasive.
+
+The fix was deleting the lines, no production change required.
+
+### Procedural integration
+
+`/tdd` invokes `@test-auditor` automatically after each GREEN. The agent receives:
+
+- the changed test file(s);
+- the captured RED failure output from the cycle just completed;
+- the GREEN diff of code under test (files touched between RED and GREEN).
+
+It returns a binary `pass | fail` verdict with structured findings. On `fail`, `/tdd` halts the current cycle.
+
+Resolve by either:
+
+- **Editing the test** to remove the evasion (preferred), then re-running RED → GREEN → `@test-auditor`; or
+- **Adding an inline override** on the relevant line:
+
+  ```ts
+  // @test-auditor-allow: <heuristic-id> — <reason>
+  ```
+
+  The override is per-finding (per heuristic ID), not per-test — other heuristics still run on the same lines. The reason must be specific and verifiable, e.g. `// @test-auditor-allow: setup-not-justified — header read by middleware request-id tracing, not by the handler`. A vague reason ("not applicable", "fine", "needed for the test") is itself a finding.
+
+The annotation is the audit log. It lives in the diff and is reviewed in the PR. There is no separate override file.
+
 ## Conventional commits
 
 ```

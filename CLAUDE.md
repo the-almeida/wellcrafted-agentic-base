@@ -12,7 +12,7 @@ Every non-trivial change follows this flow:
 
 1. `/grill` — adversarial alignment. Updates `CONTEXT.md` inline as terms are resolved. Offers ADR if the decision is hard-to-reverse, surprising, and the result of a real tradeoff.
 2. List behaviors — happy path + edge + adversarial + security. The user approves the list before any code is written.
-3. `/tdd` — vertical slice red-green-refactor. One behavior at a time. RED is observed (test runs and fails) before GREEN.
+3. `/tdd` — vertical slice red-green-refactor. One behavior at a time. RED is observed (test runs and fails) before GREEN. `@test-auditor` runs after each GREEN; a `fail` verdict halts the cycle until findings are resolved or overridden inline.
 4. Refactor pass with everything green.
 5. `/review` — self-review against the Definition of Done.
 6. `/commit` — runs review internally, generates conventional commit, asks for confirmation.
@@ -45,6 +45,14 @@ Trivial changes (typo, comment, formatting) skip the flow.
 - Free-cast branded type constructors
 - `supabase.auth.getSession()` for authorization (use `getUser()`)
 - `export const runtime = 'edge'` anywhere (enforced by `check-no-edge.sh`)
+- **Evasive tests** — workaround lines that bypass a failure instead of letting it surface the bug (full taxonomy in [docs/conventions.md#test-quality](./docs/conventions.md#test-quality))
+
+## Test quality
+
+- Green is necessary but not sufficient. A test must pass for the same reason RED failed — not because a workaround silenced the signal
+- `/tdd` invokes `@test-auditor` after each GREEN. On `fail`: fix the test, or, with specific justification, add `// @test-auditor-allow: <heuristic-id> — <reason>` inline on the relevant line (per-finding, durable in diff, reviewable in PR)
+- Never mask a failure to make a test pass. If the failure is real, fix the code, not the test
+- Full principles, patterns, and worked examples: [docs/conventions.md#test-quality](./docs/conventions.md#test-quality)
 
 ## Architecture summary
 

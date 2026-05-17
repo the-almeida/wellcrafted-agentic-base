@@ -49,8 +49,9 @@ If the list is wrong or missing items, fix it before proceeding. Do not write te
 ### 2. Tracer bullet (first behavior)
 
 ```
-RED:   write one test for the first behavior, run it, observe it fail
-GREEN: write the minimum code to pass, run it, observe it pass
+RED:   write one test for the first behavior, run it, observe it fail. Keep the failure output.
+GREEN: write the minimum code to pass, run it, observe it pass.
+AUDIT: invoke @test-auditor (see "Auditor handoff" below). On `fail` verdict, halt and resolve before continuing.
 ```
 
 This proves the path works end-to-end.
@@ -60,8 +61,9 @@ This proves the path works end-to-end.
 For each remaining behavior in the approved list:
 
 ```
-RED:   write next test, run it, observe it fail
-GREEN: minimum code to pass, run it, observe it pass
+RED:   write next test, run it, observe it fail. Keep the failure output.
+GREEN: minimum code to pass, run it, observe it pass.
+AUDIT: invoke @test-auditor with the test, the RED output, and the GREEN diff. On `fail`, halt and resolve.
 ```
 
 Rules:
@@ -70,6 +72,21 @@ Rules:
 - Only enough code to pass the current test
 - Do not anticipate future tests
 - Tests focus on observable behavior, not internals
+
+### Auditor handoff
+
+After each GREEN, invoke `@test-auditor` with three artifacts:
+
+1. The test file(s) added or modified in this cycle.
+2. The RED output captured before GREEN — the failure message and stack from the test runner. Paste it verbatim into the agent prompt.
+3. The diff of code-under-test files changed between RED and GREEN.
+
+The agent returns a JSON report with `verdict: pass | fail` and structured findings. On `pass`, advance to the next behavior. On `fail`, halt: every `blocker` finding must be resolved before continuing. Resolve by either:
+
+- **Editing the test** to remove the evasion (preferred), then re-running RED → GREEN → `@test-auditor`; or
+- **Adding an inline override** on the relevant line: `// @test-auditor-allow: <heuristic-id> — <reason>`. The reason must be specific and verifiable (see `docs/conventions.md#test-quality`). A vague reason ("not applicable", "needed for the test") is itself a finding.
+
+Do not silently ignore the verdict. Do not paraphrase the findings into a casual "looks fine" message to the user — surface the full JSON report so the user can decide.
 
 ### 4. Refactor
 
@@ -87,8 +104,10 @@ NEVER refactor while red. Get to green first.
 - RED is real. The test must run and fail before GREEN
 - Never simplify or remove a test to make implementation easier
 - Never delete a test without explicit user approval
-- Never mock the system under test
+- Never mock the code being tested
 - Mock only at the port boundary (external dependencies), never internal collaborators
+- `@test-auditor`'s `fail` verdict halts the cycle. Resolve by editing the test or by adding a specific `// @test-auditor-allow: <heuristic-id> — <reason>` override
+- Never mask a failure to make a test pass. If the failure is real, fix the code, not the test
 
 ## Per-cycle checklist
 
@@ -98,4 +117,6 @@ NEVER refactor while red. Get to green first.
 [ ] Test would survive an internal refactor
 [ ] Code is the minimum for this test
 [ ] No speculative features added
+[ ] RED output captured before GREEN
+[ ] @test-auditor verdict is pass (or every blocker has a justified inline override)
 ```

@@ -54,9 +54,6 @@ test.describe('OTP sign-in', () => {
 
     await page.goto('/sign-in')
     await page.getByLabel('Email').fill(email)
-    // Password is required by HTML; fill a dummy so the form validates
-    // through to the OTP button without blocking on `required`.
-    await page.getByLabel('Password').fill('not-used-for-otp-flow')
     await page.getByRole('button', { name: 'Or send me a 6-digit code instead' }).click()
 
     // shouldCreateUser=false → adapter returns UnauthenticatedError →
