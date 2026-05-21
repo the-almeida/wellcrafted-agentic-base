@@ -1,8 +1,10 @@
+import vitest from '@vitest/eslint-plugin'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
 import boundaries from 'eslint-plugin-boundaries'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
+import playwright from 'eslint-plugin-playwright'
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -136,8 +138,28 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ['e2e/**/*.ts'],
+    files: ['**/*.test.{ts,tsx}', '**/*.integration.test.{ts,tsx}'],
+    plugins: { vitest },
     rules: {
+      ...vitest.configs.recommended.rules,
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-disabled-tests': 'error',
+      'vitest/no-conditional-expect': 'error',
+      'vitest/no-standalone-expect': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/expect-expect': 'error',
+      'vitest/valid-expect': 'error',
+    },
+  },
+  {
+    files: ['e2e/**/*.ts'],
+    plugins: { playwright },
+    rules: {
+      ...playwright.configs['flat/recommended'].rules,
+      'playwright/no-wait-for-timeout': 'error',
+      'playwright/no-skipped-test': ['warn', { allowConditional: true }],
+      'playwright/no-force-option': 'warn',
+      'playwright/no-element-handle': 'warn',
       // Playwright's fixture API uses `use` — collides with react-hooks naming rule.
       'react-hooks/rules-of-hooks': 'off',
     },

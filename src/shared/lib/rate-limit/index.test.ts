@@ -26,10 +26,9 @@ describe('rateLimit (in-memory backend)', () => {
 
     const exceeded = await rateLimit(key, config)
     expect(exceeded.ok).toBe(false)
-    if (!exceeded.ok) {
-      expect(exceeded.error.code).toBe('RATE_LIMIT_EXCEEDED')
-      expect(exceeded.error.key).toBe(key)
-    }
+    if (exceeded.ok) throw new Error('expected rate limit to be exceeded')
+    expect(exceeded.error.code).toBe('RATE_LIMIT_EXCEEDED')
+    expect(exceeded.error.key).toBe(key)
   })
 
   it('resets the counter after the window elapses', async () => {

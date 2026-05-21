@@ -7,13 +7,12 @@ describe('oauthCallbackInputSchema', () => {
     const result = oauthCallbackInputSchema.safeParse({ code: 'valid-code-abc123' })
 
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data).toEqual({
-        code: 'valid-code-abc123',
-        next: '/dashboard',
-        from: '/sign-in',
-      })
-    }
+    if (!result.success) throw result.error
+    expect(result.data).toEqual({
+      code: 'valid-code-abc123',
+      next: '/dashboard',
+      from: '/sign-in',
+    })
   })
 
   it('preserves a valid relative next path', () => {
@@ -23,9 +22,8 @@ describe('oauthCallbackInputSchema', () => {
     })
 
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.next).toBe('/settings')
-    }
+    if (!result.success) throw result.error
+    expect(result.data.next).toBe('/settings')
   })
 
   it('rejects an empty code', () => {
@@ -86,9 +84,8 @@ describe('oauthCallbackInputSchema', () => {
   it('defaults `from` to /sign-in when not provided', () => {
     const result = oauthCallbackInputSchema.safeParse({ code: 'valid-code' })
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.from).toBe('/sign-in')
-    }
+    if (!result.success) throw result.error
+    expect(result.data.from).toBe('/sign-in')
   })
 
   it('accepts `from=/sign-up`', () => {
@@ -97,9 +94,8 @@ describe('oauthCallbackInputSchema', () => {
       from: '/sign-up',
     })
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(result.data.from).toBe('/sign-up')
-    }
+    if (!result.success) throw result.error
+    expect(result.data.from).toBe('/sign-up')
   })
 
   it('rejects `from` values outside the allow-list (open-redirect guard)', () => {

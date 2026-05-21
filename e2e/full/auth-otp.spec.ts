@@ -62,8 +62,6 @@ test.describe('OTP sign-in', () => {
     // Still on the choose stage; the verify form must NOT have rendered.
     await expect(page.getByLabel('6-digit code')).toHaveCount(0)
 
-    // Settle then confirm Mailpit stayed empty for this address.
-    await page.waitForTimeout(1000)
     const list = await fetch(
       `http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
     )
