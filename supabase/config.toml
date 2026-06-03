@@ -228,6 +228,18 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Override the default GoTrue templates so the new-user sign-up email
+# surfaces `{{ .Token }}` (a 6-digit code) — the app's verify form asks
+# for that code, and the built-in `confirmation` default only renders a
+# magic link. Without this, OTP sign-up cannot complete in dev/CI.
+[auth.email.template.confirmation]
+subject = "Confirm your sign-up"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.magic_link]
+subject = "Your sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
