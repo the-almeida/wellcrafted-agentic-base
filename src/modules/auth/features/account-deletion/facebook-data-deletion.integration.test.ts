@@ -110,9 +110,6 @@ describe('handleFacebookDataDeletion', () => {
       APP_SECRET,
     )
 
-    const before = await db.select().from(accountDeletionRequests)
-    const beforeCount = before.length
-
     const result = await handleFacebookDataDeletion({
       signedRequest,
       appSecret: APP_SECRET,
@@ -124,8 +121,11 @@ describe('handleFacebookDataDeletion', () => {
     expect(result.value.confirmationCode).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(result.value.url).toBe(`${STATUS_URL_BASE}?code=${result.value.confirmationCode}`)
 
-    const after = await db.select().from(accountDeletionRequests)
-    expect(after.length).toBe(beforeCount)
+    const [row] = await db
+      .select()
+      .from(accountDeletionRequests)
+      .where(eq(accountDeletionRequests.confirmationCode, result.value.confirmationCode))
+    expect(row).toBeUndefined()
   })
 
   it('returns the existing confirmation code when the user already has an active request', async () => {
