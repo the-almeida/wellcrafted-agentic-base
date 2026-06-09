@@ -34,4 +34,4 @@ Positive:
 Negative:
 
 - Two places define ownership: each module's `Policy` and the RLS policy. They must stay aligned (we keep RLS minimal so this is mostly trivial)
-- Developers must remember to call the module's policy (the DoD checklist, `/review`, and the policy-presence CI check enforce this)
+- Developers must remember to call the module's policy (the DoD checklist, `/wc-review`, and the policy-presence CI check enforce this)

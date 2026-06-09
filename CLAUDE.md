@@ -10,12 +10,12 @@ Stack: Next.js (App Router), TypeScript, Drizzle, Supabase (`@supabase/ssr`), Zo
 
 Every non-trivial change follows this flow:
 
-1. `/grill` — adversarial alignment. Updates `CONTEXT.md` inline as terms are resolved. Offers ADR if the decision is hard-to-reverse, surprising, and the result of a real tradeoff.
+1. `/wc-grill` — adversarial alignment. Updates `CONTEXT.md` inline as terms are resolved. Offers ADR if the decision is hard-to-reverse, surprising, and the result of a real tradeoff.
 2. List behaviors — happy path + edge + adversarial + security. The user approves the list before any code is written.
-3. `/tdd` — vertical slice red-green-refactor. One behavior at a time. RED is observed (test runs and fails) before GREEN. `@test-auditor` runs after each GREEN; a `fail` verdict halts the cycle until findings are resolved or overridden inline.
+3. `/wc-tdd` — vertical slice red-green-refactor. One behavior at a time. RED is observed (test runs and fails) before GREEN. `@wc-test-auditor` runs after each GREEN; a `fail` verdict halts the cycle until findings are resolved or overridden inline.
 4. Refactor pass with everything green.
-5. `/review` — self-review against the Definition of Done.
-6. `/commit` — runs review internally, generates conventional commit, asks for confirmation.
+5. `/wc-review` — self-review against the Definition of Done.
+6. `/wc-commit` — runs review internally, generates conventional commit, asks for confirmation.
 
 Trivial changes (typo, comment, formatting) skip the flow.
 
@@ -50,7 +50,7 @@ Trivial changes (typo, comment, formatting) skip the flow.
 ## Test quality
 
 - Green is necessary but not sufficient. A test must pass for the same reason RED failed — not because a workaround silenced the signal
-- `/tdd` invokes `@test-auditor` after each GREEN. On `fail`: fix the test, or, with specific justification, add `// @test-auditor-allow: <heuristic-id> — <reason>` inline on the relevant line (per-finding, durable in diff, reviewable in PR)
+- `/wc-tdd` invokes `@wc-test-auditor` after each GREEN. On `fail`: fix the test, or, with specific justification, add `// @wc-test-auditor-allow: <heuristic-id> — <reason>` inline on the relevant line (per-finding, durable in diff, reviewable in PR)
 - Never mask a failure to make a test pass. If the failure is real, fix the code, not the test
 - Full principles, patterns, and worked examples: [docs/conventions.md#test-quality](./docs/conventions.md#test-quality)
 
@@ -143,7 +143,7 @@ For every implementation verify:
 - Server actions wrapped with `withErrorBoundary`
 - `getUser()`, never `getSession()` for auth checks
 
-For changes touching auth, authorization, payments, or PII handling: invoke `@security-auditor` before opening a PR.
+For changes touching auth, authorization, payments, or PII handling: invoke `@wc-security-auditor` before opening a PR.
 
 ## Tailwind and UI
 
@@ -174,7 +174,7 @@ For changes touching auth, authorization, payments, or PII handling: invoke `@se
 
 ## Definition of Done
 
-See [docs/dod.md](./docs/dod.md). `/review` and `/commit` validate against this checklist.
+See [docs/dod.md](./docs/dod.md). `/wc-review` and `/wc-commit` validate against this checklist.
 
 ## Gotchas
 

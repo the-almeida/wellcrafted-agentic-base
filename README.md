@@ -44,7 +44,7 @@ Full details in [docs/architecture.md](./docs/architecture.md) and [ADR 0001](./
 ## Development workflow
 
 1. Branch from `main`: `git checkout -b feat/something`
-2. Implement following the [CLAUDE.md](./CLAUDE.md) workflow (`/grill` → `/tdd` → `/commit`)
+2. Implement following the [CLAUDE.md](./CLAUDE.md) workflow (`/wc-grill` → `/wc-tdd` → `/wc-commit`)
 3. Push (pre-push runs lint, typecheck, policy presence check, unit, integration)
 4. Open a PR (CI runs the full suite including e2e)
 5. PRs generate Vercel preview deployments automatically

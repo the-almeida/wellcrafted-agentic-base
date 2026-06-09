@@ -2,7 +2,7 @@
 
 This file holds the project's shared vocabulary. Terms here are canonical — code, conversations, and tests must use them consistently.
 
-`/grill` updates this file inline as terms are resolved.
+`/wc-grill` updates this file inline as terms are resolved.
 
 ## Glossary
 
@@ -20,4 +20,4 @@ This file holds the project's shared vocabulary. Terms here are canonical — co
 
 **rights request channel** — The mailto link published in the Privacy Policy through which users exercise LGPD Art. 18 / GDPR Art. 15–22 rights (access, correction, deletion, portability, revocation). Self-serve account deletion is the in-app shortcut; the channel is the catch-all for everything else.
 
-**evasive test** — A test containing steps or assertions that exist only to bypass a failing path (filling a field the code under test does not read, swallowing an expected exception with a generic catch, asserting absence of an element that was never going to render, sleeping instead of waiting on a real signal) rather than letting the failure surface the underlying bug. Detected by `@test-auditor`, which runs from `/tdd` after each GREEN. Findings are either resolved by editing the test or overridden inline with `// @test-auditor-allow: <heuristic-id> — <reason>`. Distinct from "flaky test" (nondeterminism) and "brittle test" (over-coupled to implementation).
+**evasive test** — A test containing steps or assertions that exist only to bypass a failing path (filling a field the code under test does not read, swallowing an expected exception with a generic catch, asserting absence of an element that was never going to render, sleeping instead of waiting on a real signal) rather than letting the failure surface the underlying bug. Detected by `@wc-test-auditor`, which runs from `/wc-tdd` after each GREEN. Findings are either resolved by editing the test or overridden inline with `// @wc-test-auditor-allow: <heuristic-id> — <reason>`. Distinct from "flaky test" (nondeterminism) and "brittle test" (over-coupled to implementation).

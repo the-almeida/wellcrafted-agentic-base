@@ -7,7 +7,7 @@ description: Run review, generate conventional commit, ask for confirmation befo
 ## Steps
 
 1. Read the staged diff (`git diff --cached`). If nothing is staged, read the unstaged diff and ask the user whether to stage it
-2. Run the `/review` checklist internally. If any item FAILs, surface it to the user and ask: "Fix first or proceed anyway?"
+2. Run the `/wc-review` checklist internally. If any item FAILs, surface it to the user and ask: "Fix first or proceed anyway?"
 3. If the user chooses to proceed (or no FAILs were found), generate a conventional commit message:
    - Header: `<type>(<scope>): <short description>` (≤72 chars)
    - Body: explain WHY the change was made, not what (the diff already shows what)
@@ -24,4 +24,4 @@ description: Run review, generate conventional commit, ask for confirmation befo
 - Header is imperative, present tense ("add" not "added")
 - Body explains why, not what
 - No `--no-verify`. Ever
-- If hooks fail, the commit does not happen. Fix the cause and re-run `/commit`
+- If hooks fail, the commit does not happen. Fix the cause and re-run `/wc-commit`

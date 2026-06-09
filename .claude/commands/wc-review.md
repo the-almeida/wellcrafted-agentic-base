@@ -19,7 +19,7 @@ Do not skip items. Do not gloss over FAIL items. The review is worthless if it i
 
 ## Areas requiring extra care
 
-- **Security**: any change touching authentication, authorization, payments, or PII handling. Recommend invoking `@security-auditor` if any of these were touched
+- **Security**: any change touching authentication, authorization, payments, or PII handling. Recommend invoking `@wc-security-auditor` if any of these were touched
 - **Boundaries**: cross-module imports must go through `index.ts` only
 - **Policies**: any module with new handlers must have `domain/policy.ts`
 - **Tests**: each new behavior has a test; RED was observed before GREEN

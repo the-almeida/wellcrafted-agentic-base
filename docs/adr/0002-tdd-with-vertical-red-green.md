@@ -17,7 +17,7 @@ Use TDD with **vertical slices**:
    - **GREEN**: write the minimum code to pass, run it, observe it pass
 3. Refactor when all tests are green. Never refactor while red.
 
-This is encoded in the `/tdd` slash command. The `/grill` command precedes it for alignment.
+This is encoded in the `/wc-tdd` slash command. The `/wc-grill` command precedes it for alignment.
 
 ## Alternatives considered
 

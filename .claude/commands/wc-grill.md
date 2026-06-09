@@ -54,4 +54,4 @@ ADR format follows the existing files in `docs/adr/`.
 
 ## Hard rule
 
-Do NOT write production code during a `/grill` session. The output is alignment, updated `CONTEXT.md`, and possibly an ADR. Code comes after, in `/tdd`.
+Do NOT write production code during a `/wc-grill` session. The output is alignment, updated `CONTEXT.md`, and possibly an ADR. Code comes after, in `/wc-tdd`.

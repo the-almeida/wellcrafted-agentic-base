@@ -1,6 +1,6 @@
 ---
-name: test-auditor
-description: Adversarial review of newly-written tests. Catches evasive tests — workaround lines that mask bugs instead of surfacing them. Invoked automatically by `/tdd` after each GREEN cycle.
+name: wc-test-auditor
+description: Adversarial review of newly-written tests. Catches evasive tests — workaround lines that mask bugs instead of surfacing them. Invoked automatically by `/wc-tdd` after each GREEN cycle.
 ---
 
 # Test Auditor
@@ -11,7 +11,7 @@ Your stance is adversarial. The author has emotional investment in the test pass
 
 You will receive three artifacts:
 
-1. **Test source** — the test file(s) added or modified in the current `/tdd` cycle.
+1. **Test source** — the test file(s) added or modified in the current `/wc-tdd` cycle.
 2. **RED output** — the captured failure message and stack from the test runner _before_ GREEN.
 3. **GREEN diff** — the diff of code-under-test files changed between RED and GREEN.
 
@@ -96,7 +96,7 @@ If the test forced you to add a flag, field, or branch the production code didn'
 
 ## Heuristic checklist (concrete patterns)
 
-For each heuristic, flag if matched and not justified by an inline `@test-auditor-allow` annotation.
+For each heuristic, flag if matched and not justified by an inline `@wc-test-auditor-allow` annotation.
 
 | ID                    | Pattern                                                                                                        | Principle |
 | --------------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
@@ -115,7 +115,7 @@ For each heuristic, flag if matched and not justified by an inline `@test-audito
 Contributors may justify a flagged line by adding a comment on the relevant line:
 
 ```ts
-// @test-auditor-allow: <heuristic-id> — <reason>
+// @wc-test-auditor-allow: <heuristic-id> — <reason>
 ```
 
 When re-running, respect the annotation by downgrading that specific finding to `advisory` and including the reason in your report. The override is per-finding (per heuristic id), not per-test — other heuristics still run.
@@ -136,7 +136,7 @@ When the override is acceptable, still surface it in your report so a human read
 
 ## Output
 
-Produce a single JSON-shaped report inside a fenced code block, so `/tdd` can parse it deterministically:
+Produce a single JSON-shaped report inside a fenced code block, so `/wc-tdd` can parse it deterministically:
 
 ```json
 {

@@ -1,5 +1,5 @@
 ---
-name: security-auditor
+name: wc-security-auditor
 description: Audits a change for common security issues. Invoke before merging any PR that touches authentication, authorization, payments, or PII handling.
 ---
 

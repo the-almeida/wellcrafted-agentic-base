@@ -47,7 +47,7 @@ A feature or fix is done when ALL of these are true:
 - [ ] Secrets via the validated `env` module
 - [ ] No PII in logs
 - [ ] Public endpoints (anonymous-callable) are rate-limited
-- [ ] `@security-auditor` invoked for changes touching auth, authorization, payments, or PII
+- [ ] `@wc-security-auditor` invoked for changes touching auth, authorization, payments, or PII
 
 ## Migrations
 
@@ -68,7 +68,7 @@ A feature or fix is done when ALL of these are true:
 
 ## Process
 
-- [ ] Conventional commit message via `/commit`
+- [ ] Conventional commit message via `/wc-commit`
 - [ ] `CONTEXT.md` updated if a new domain term was introduced
 - [ ] ADR added if the decision is hard-to-reverse, surprising, AND a real tradeoff
 
