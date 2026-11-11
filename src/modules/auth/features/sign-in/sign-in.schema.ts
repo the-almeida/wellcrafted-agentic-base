@@ -1,7 +1,9 @@
 import { z } from 'zod'
 
+import { EmailSchema } from '../../domain/email'
+
 export const signInSchema = z.object({
-  email: z.email(),
+  email: EmailSchema,
   password: z.string().min(8).max(72),
 })
 
