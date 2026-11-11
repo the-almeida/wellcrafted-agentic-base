@@ -1,0 +1,10 @@
+# Check out text files with LF on every OS, regardless of the machine's
+# `core.autocrlf`. Prettier expects LF, and shell scripts / husky hooks break
+# with CRLF. Git for Windows enables autocrlf by default, so without this a
+# fresh Windows clone shows every file as a Prettier violation.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
