@@ -78,5 +78,5 @@ OAuth providers cannot be exercised in CI — Google and Facebook both rate-limi
 
 - [ ] Real Google sign-in against staging completes and lands the user on `/dashboard` with `public.users.name` populated from the Google profile
 - [ ] Real Facebook sign-in against staging completes the same flow. If the user denies the `public_profile` scope, the trigger rejects the insert and the app redirects to `/sign-in?error=oauth_failed`; the `AuthErrorBanner` hint about granting the profile permission is visible (#24)
-- [ ] Both providers' redirect URIs in the provider consoles match the deployed callback URL (`https://<host>/auth/callback`)
+- [ ] Both providers' redirect URIs in the provider consoles point at Supabase (`https://<project-ref>.supabase.co/auth/v1/callback`), and the Supabase redirect allow-list covers the app callback (`https://<host>/auth/callback`). See [deployment.md](./deployment.md#7-oauth-providers-optional)
 - [ ] If `SUPABASE_AUTH_EXTERNAL_*` env vars changed, the Supabase project's auth settings reflect them
