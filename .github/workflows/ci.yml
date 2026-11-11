@@ -41,6 +41,9 @@ jobs:
       - name: Start Supabase
         run: pnpm exec supabase start
 
+      - name: Start Redis for the rate-limit tests
+        run: docker compose up -d --wait
+
       - name: Export Supabase env
         run: |
           STATUS=$(pnpm exec supabase status -o json)

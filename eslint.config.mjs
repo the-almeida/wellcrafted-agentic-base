@@ -147,7 +147,8 @@ const eslintConfig = defineConfig([
       'vitest/no-conditional-expect': 'error',
       'vitest/no-standalone-expect': 'error',
       'vitest/no-identical-title': 'error',
-      'vitest/expect-expect': 'error',
+      // Assertion helpers named expect* (e.g. expectFailsOpen) count as assertions.
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'expect*'] }],
       'vitest/valid-expect': 'error',
     },
   },

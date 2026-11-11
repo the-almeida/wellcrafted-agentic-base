@@ -164,8 +164,25 @@ Scope when meaningful (module name): `feat(auth): add magic link sign-in`.
 Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything callable by anonymous users) MUST be rate-limited before going to production.
 
 - Per-IP and per-email limits where applicable; per-IP alone lets one bot saturate a single email's bucket, per-email alone lets an attacker scrape by varying emails. Wire both
-- Supabase Auth provides built-in rate limiting on its endpoints; the scaffold's auth flows benefit from that automatically. New public endpoints do NOT inherit this protection
-- `src/shared/lib/rate-limit/` ships a working implementation: Vercel Marketplace Redis when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are set (auto-injected by Vercel when you provision a Redis store), otherwise an in-memory fallback that warns once on startup. The in-memory backend resets on restart and doesn't share state across replicas — fine for local dev, not safe for multi-instance production
+- Build email keys with `rateLimitKey(endpoint, 'email', email)`. It trims and lowercases the address; without that, every capitalization of one address gets its own bucket while all of them reach the same Supabase account
+- Supabase Auth's built-in limits are not a per-user backstop here. Server actions call Supabase from the server, so Supabase sees the server's IP and its "per IP" limits apply to the whole app at once. New public endpoints that don't touch Supabase have no protection besides ours
+- `rateLimit` is defense against abuse, not authorization. When Redis is unavailable it fails open: the call proceeds, and the failure goes to `logger.error` and Sentry (the key is left out, since it can contain an email). The Redis client uses a 1s timeout and a single retry, so an outage costs at most about two seconds per call
+
+### Backends
+
+- **Redis** when `KV_REST_API_URL` and `KV_REST_API_TOKEN` are both set. The `env` module rejects one without the other, because silently falling back to memory would multiply every limit by the number of instances. The client is `@upstash/redis` (Vercel deprecated `@vercel/kv`), so any Upstash-compatible REST endpoint works
+- **In memory** when neither is set. Counters reset on restart and are not shared across instances: fine for local dev and single-instance deploys, not safe for multi-instance production. A warning is logged on first use
+- Counting is a fixed window, done in one Lua script so a counter can never be left without an expiry. A counter found without one (left by older code) gets an expiry on its next call
+
+### Deploying to Vercel
+
+1. Storage → Marketplace → pick a Redis offering (for example Upstash) and connect it to the project. Vercel injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`
+2. Redeploy. The warning about in-memory rate limiting disappears from the logs
+
+### Tests
+
+- The same contract suite runs against both backends (`src/shared/lib/rate-limit/contract.test-helper.ts`). The Redis run uses a real Redis behind `serverless-redis-http`, which speaks the Upstash REST API, from `docker-compose.yml`
+- `pnpm dev`, `pnpm bootstrap` and CI run `docker compose up -d`. Without it the Redis tests fail with a message saying so; they are never skipped
 - The DoD verifies rate limiting on new public endpoints
 
 ## Auth: accepted trade-offs

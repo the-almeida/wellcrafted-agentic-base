@@ -3,7 +3,7 @@
 import { ValidationError } from '@/shared/lib/errors/base'
 import { withErrorBoundary } from '@/shared/lib/errors/with-error-boundary'
 import { getRequestIp } from '@/shared/lib/http/request-ip'
-import { rateLimit } from '@/shared/lib/rate-limit'
+import { rateLimit, rateLimitKey } from '@/shared/lib/rate-limit'
 import { err } from '@/shared/lib/result'
 
 import { authProvider } from '../../adapters/auth-provider.supabase'
@@ -24,7 +24,7 @@ export const requestSignUpOtp = withErrorBoundary(async (raw: unknown) => {
     return err(new ValidationError(parsed.error.flatten()))
   }
 
-  const emailLimit = await rateLimit(`otp-sign-up:email:${parsed.data.email}`, {
+  const emailLimit = await rateLimit(rateLimitKey('otp-sign-up', 'email', parsed.data.email), {
     windowMs: 60_000,
     max: 5,
   })

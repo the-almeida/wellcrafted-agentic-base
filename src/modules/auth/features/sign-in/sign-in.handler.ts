@@ -3,7 +3,7 @@
 import { ValidationError } from '@/shared/lib/errors/base'
 import { withErrorBoundary } from '@/shared/lib/errors/with-error-boundary'
 import { getRequestIp } from '@/shared/lib/http/request-ip'
-import { rateLimit } from '@/shared/lib/rate-limit'
+import { rateLimit, rateLimitKey } from '@/shared/lib/rate-limit'
 import { err, ok } from '@/shared/lib/result'
 import { Events } from '@/shared/observability/analytics/events'
 import { track } from '@/shared/observability/analytics/track'
@@ -19,7 +19,7 @@ export const signIn = withErrorBoundary(async (raw: unknown) => {
     return err(new ValidationError(parsed.error.flatten()))
   }
 
-  const emailLimit = await rateLimit(`sign-in:email:${parsed.data.email}`, {
+  const emailLimit = await rateLimit(rateLimitKey('sign-in', 'email', parsed.data.email), {
     windowMs: 60_000,
     max: 10,
   })

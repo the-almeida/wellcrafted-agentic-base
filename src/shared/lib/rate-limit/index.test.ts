@@ -1,77 +1,58 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { rateLimit } from './index'
-
-describe('rateLimit (in-memory backend)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
+// What index.ts adds on top of the limiters (whose behavior is the contract in
+// contract.test-helper.ts): picking the in-memory backend when no KV variables
+// are set, and saying so once. The Redis branch is covered in
+// redis.integration.test.ts, which needs the local Redis.
+describe('rateLimit (public entry point, no KV variables)', () => {
   afterEach(() => {
-    vi.useRealTimers()
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
   })
 
-  it('returns ok for the first call against a fresh key', async () => {
-    const result = await rateLimit(`test-fresh-${Math.random()}`, { windowMs: 60_000, max: 3 })
-    expect(result.ok).toBe(true)
-  })
+  async function importFresh() {
+    vi.resetModules()
+    // Production is where the notice matters, and where it used to fire at import.
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('KV_REST_API_URL', '')
+    vi.stubEnv('KV_REST_API_TOKEN', '')
+    const { logger } = await import('@/shared/observability/logger')
+    const warned = vi.spyOn(logger, 'warn').mockImplementation(() => undefined)
+    const consoleWarned = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const rateLimitModule = await import('./index')
+    return { rateLimit: rateLimitModule.rateLimit, warned, consoleWarned }
+  }
 
-  it('returns err with RateLimitExceededError on the (max+1)-th call within the window', async () => {
-    const key = `test-overlimit-${Math.random()}`
-    const config = { windowMs: 60_000, max: 3 }
-
-    for (let i = 0; i < config.max; i++) {
-      const ok = await rateLimit(key, config)
-      expect(ok.ok, `call ${i + 1} should be ok`).toBe(true)
-    }
-
-    const exceeded = await rateLimit(key, config)
-    expect(exceeded.ok).toBe(false)
-    if (exceeded.ok) throw new Error('expected rate limit to be exceeded')
-    expect(exceeded.error.code).toBe('RATE_LIMIT_EXCEEDED')
-    expect(exceeded.error.key).toBe(key)
-  })
-
-  it('resets the counter after the window elapses', async () => {
-    const key = `test-reset-${Math.random()}`
+  it('counts in memory: the call after max is rejected', async () => {
+    const { rateLimit } = await importFresh()
+    const key = `entry-memory-${Math.random()}`
     const config = { windowMs: 60_000, max: 2 }
 
-    await rateLimit(key, config)
-    await rateLimit(key, config)
-    const exceeded = await rateLimit(key, config)
-    expect(exceeded.ok).toBe(false)
+    expect((await rateLimit(key, config)).ok).toBe(true)
+    expect((await rateLimit(key, config)).ok).toBe(true)
+    const rejected = await rateLimit(key, config)
 
-    vi.advanceTimersByTime(config.windowMs + 1)
-
-    const afterReset = await rateLimit(key, config)
-    expect(afterReset.ok).toBe(true)
+    if (rejected.ok) throw new Error('call max+1 should be rejected')
+    expect(rejected.error.code).toBe('RATE_LIMIT_EXCEEDED')
   })
 
-  it('keeps counters per key — one key over limit does not affect another', async () => {
-    const config = { windowMs: 60_000, max: 1 }
-    const keyA = `test-iso-a-${Math.random()}`
-    const keyB = `test-iso-b-${Math.random()}`
+  it('logs nothing when the module is imported', async () => {
+    const { warned, consoleWarned } = await importFresh()
 
-    await rateLimit(keyA, config)
-    const aExceeded = await rateLimit(keyA, config)
-    expect(aExceeded.ok).toBe(false)
-
-    const bFresh = await rateLimit(keyB, config)
-    expect(bFresh.ok).toBe(true)
+    expect(consoleWarned).not.toHaveBeenCalled()
+    expect(warned).not.toHaveBeenCalled()
   })
 
-  it('continues to return err while over limit (no implicit reset on rejection)', async () => {
-    const key = `test-stays-locked-${Math.random()}`
-    const config = { windowMs: 60_000, max: 1 }
+  it('warns once, on first use, that rate limiting is in memory', async () => {
+    const { rateLimit, warned, consoleWarned } = await importFresh()
 
-    await rateLimit(key, config)
-    const first = await rateLimit(key, config)
-    expect(first.ok).toBe(false)
+    await rateLimit(`notice-${Math.random()}`, { windowMs: 60_000, max: 5 })
+    await rateLimit(`notice-${Math.random()}`, { windowMs: 60_000, max: 5 })
 
-    // A few more rejections within the window should all stay err.
-    for (let i = 0; i < 3; i++) {
-      vi.advanceTimersByTime(5_000)
-      const subsequent = await rateLimit(key, config)
-      expect(subsequent.ok).toBe(false)
-    }
+    expect(warned).toHaveBeenCalledTimes(1)
+    expect(warned).toHaveBeenCalledWith(
+      '[rate-limit] in-memory rate limiting active; not safe for multi-instance production',
+    )
+    expect(consoleWarned).not.toHaveBeenCalled()
   })
 })

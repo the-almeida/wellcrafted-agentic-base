@@ -19,6 +19,9 @@ pnpm install
 echo "→ Starting Supabase..."
 pnpm exec supabase start
 
+echo "→ Starting Redis for the rate-limit tests..."
+docker compose up -d --wait
+
 echo "→ Populating .env.local from Supabase status..."
 if [ ! -f .env.local ]; then
   cp .env.example .env.local

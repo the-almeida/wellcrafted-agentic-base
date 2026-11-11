@@ -52,10 +52,26 @@ const serverShape = {
   ACCOUNT_DELETION_GRACE_DAYS: z.coerce.number().int().positive().default(30),
 }
 
-const serverSchema = z.object(serverShape)
+// Rate limiting uses Redis only when both are set. One without the other is
+// always a deploy mistake, and silently falling back to per-instance memory
+// would multiply every limit by the number of instances, so fail loudly.
+const serverSchema = z.object(serverShape).superRefine((value, ctx) => {
+  const hasUrl = value.KV_REST_API_URL !== undefined
+  const hasToken = value.KV_REST_API_TOKEN !== undefined
+  if (hasUrl === hasToken) return
+  ctx.addIssue({
+    code: 'custom',
+    path: [hasUrl ? 'KV_REST_API_TOKEN' : 'KV_REST_API_URL'],
+    message: 'KV_REST_API_URL and KV_REST_API_TOKEN must be set together',
+  })
+})
 const clientSchema = z.object(sharedShape)
 
 type Env = z.infer<typeof serverSchema>
+
+export function parseServerEnv(raw: Record<string, unknown>) {
+  return serverSchema.safeParse(raw)
+}
 
 const isServer = typeof window === 'undefined'
 
@@ -79,7 +95,7 @@ function loadEnv(): Env {
     return { ...readPublicEnv(), ...process.env } as unknown as Env
   }
   if (isServer) {
-    const parsed = serverSchema.safeParse({ ...process.env, ...readPublicEnv() })
+    const parsed = parseServerEnv({ ...process.env, ...readPublicEnv() })
     if (!parsed.success) {
       console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors)
       throw new Error('Invalid environment variables')

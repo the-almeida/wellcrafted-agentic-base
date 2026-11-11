@@ -6,4 +6,7 @@ if ! pnpm exec supabase status >/dev/null 2>&1; then
   pnpm exec supabase start
 fi
 
+# Redis + serverless-redis-http for the rate-limit tests (idempotent).
+docker compose up -d --wait
+
 pnpm exec next dev
