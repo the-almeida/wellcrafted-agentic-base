@@ -1,5 +1,9 @@
 import Link from 'next/link'
 
+import { env } from '@/shared/lib/env'
+
+import { activeOAuthProviders } from '@/modules/auth'
+
 import { AuthErrorBanner } from '../_components/auth-error-banner'
 
 import { SignInForm } from './sign-in-form'
@@ -25,7 +29,7 @@ export default async function SignInPage({ searchParams }: Props) {
         </p>
       </header>
       <AuthErrorBanner error={error} context="sign-in" />
-      <SignInForm />
+      <SignInForm oauthProviders={activeOAuthProviders(env)} />
     </div>
   )
 }

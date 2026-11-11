@@ -185,6 +185,28 @@ Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything 
 - `pnpm dev`, `pnpm bootstrap` and CI run `docker compose up -d`. Without it the Redis tests fail with a message saying so; they are never skipped
 - The DoD verifies rate limiting on new public endpoints
 
+## OAuth providers
+
+A provider (Google, Facebook) is **active** when its client id is set in the app's environment (`GOOGLE_OAUTH_CLIENT_ID`, `FACEBOOK_OAUTH_CLIENT_ID`). Only active providers get a button on the sign-in and sign-up pages; with none active, the buttons and the "or" divider disappear. Client ids are public (they show up in the provider's redirect URL), so putting them in the app's environment exposes nothing.
+
+Supabase Auth must have exactly the same providers enabled. The app cannot set that for you: locally it lives in `supabase/config.toml` (`enabled` does not accept `env()`; the CLI rejects it in boolean fields), and in production in the Supabase dashboard (Authentication → Providers).
+
+`pnpm build` runs `pnpm check:oauth-providers` first. It reads Supabase Auth's public `GET /auth/v1/settings` with the anon key and fails the build, everywhere (locally, in CI and on deploys), when:
+
+- a supported provider is enabled in Supabase but not active in the app, or the other way round;
+- any other OAuth provider is enabled in Supabase. The app has no button for it, but anyone can still use it by calling Supabase directly with the public anon key;
+- Supabase cannot be asked (not running, wrong URL or anon key, or an answer that is not the settings).
+
+Email, phone and anonymous sign-ins are not part of this check.
+
+The check runs at build time only. A provider enabled in the Supabase dashboard after a deploy goes unnoticed until the next build, so change providers through a deploy, not just in the dashboard.
+
+To enable a provider:
+
+1. Register the app with the provider. The redirect URI is `<SUPABASE_URL>/auth/v1/callback`.
+2. Locally: set its client id and secret in `.env.local`, set `enabled = true` in `supabase/config.toml`, and restart Supabase (`pnpm exec supabase stop && pnpm exec supabase start`); the CLI reads `.env.local` only on start.
+3. In production: enable the provider in the Supabase dashboard with the same client id and secret, and set the client id in the deploy environment.
+
 ## Auth: accepted trade-offs
 
 These are deliberate choices the boilerplate makes that a downstream project may want to revisit:

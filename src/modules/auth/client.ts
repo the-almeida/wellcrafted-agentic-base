@@ -15,6 +15,7 @@
  * plugin treat them as imports through a module's public surface.
  */
 
+export { OAUTH_PROVIDER_NAME, type OAuthProvider } from './domain/oauth-providers'
 export type { Role, User } from './domain/user'
 
 export { createSupabaseBrowserClient } from './adapters/supabase/browser-client'

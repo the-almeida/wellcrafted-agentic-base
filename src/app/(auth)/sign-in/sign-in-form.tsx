@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 
-import { requestSignInOtp, signIn } from '@/modules/auth/client'
+import { requestSignInOtp, signIn, type OAuthProvider } from '@/modules/auth/client'
 
 import { AuthDivider } from '../_components/auth-divider'
 import { OAuthButtons } from '../_components/oauth-buttons'
@@ -15,7 +15,12 @@ import { OtpVerifyForm } from '../_components/otp-verify-form'
 
 type Stage = { kind: 'choose' } | { kind: 'awaiting-code'; email: string }
 
-export function SignInForm() {
+type Props = {
+  /** Active OAuth providers, decided on the server from the environment. */
+  oauthProviders: readonly OAuthProvider[]
+}
+
+export function SignInForm({ oauthProviders }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -47,8 +52,17 @@ export function SignInForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <OAuthButtons disabled={isPending} originPath="/sign-in" onError={onError} />
-      <AuthDivider />
+      {oauthProviders.length > 0 ? (
+        <>
+          <OAuthButtons
+            providers={oauthProviders}
+            disabled={isPending}
+            originPath="/sign-in"
+            onError={onError}
+          />
+          <AuthDivider />
+        </>
+      ) : null}
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {

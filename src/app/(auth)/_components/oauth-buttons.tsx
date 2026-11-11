@@ -2,9 +2,15 @@
 
 import { Button } from '@/shared/ui/button'
 
-import { createSupabaseBrowserClient } from '@/modules/auth/client'
+import {
+  createSupabaseBrowserClient,
+  OAUTH_PROVIDER_NAME,
+  type OAuthProvider,
+} from '@/modules/auth/client'
 
 type Props = {
+  /** Active providers only; each gets one button, in this order. */
+  providers: readonly OAuthProvider[]
   disabled?: boolean
   /** Same-origin path the user lands on after a successful OAuth exchange. */
   next?: string
@@ -17,8 +23,14 @@ type Props = {
   onError: (message: string) => void
 }
 
-export function OAuthButtons({ disabled, next = '/dashboard', originPath, onError }: Props) {
-  async function onOAuth(provider: 'google' | 'facebook') {
+export function OAuthButtons({
+  providers,
+  disabled,
+  next = '/dashboard',
+  originPath,
+  onError,
+}: Props) {
+  async function onOAuth(provider: OAuthProvider) {
     onError('')
     const supabase = createSupabaseBrowserClient()
     const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
@@ -33,17 +45,17 @@ export function OAuthButtons({ disabled, next = '/dashboard', originPath, onErro
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" variant="outline" onClick={() => onOAuth('google')} disabled={disabled}>
-        Continue with Google
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onOAuth('facebook')}
-        disabled={disabled}
-      >
-        Continue with Facebook
-      </Button>
+      {providers.map((provider) => (
+        <Button
+          key={provider}
+          type="button"
+          variant="outline"
+          onClick={() => onOAuth(provider)}
+          disabled={disabled}
+        >
+          Continue with {OAUTH_PROVIDER_NAME[provider]}
+        </Button>
+      ))}
     </div>
   )
 }

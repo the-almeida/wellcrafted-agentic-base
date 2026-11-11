@@ -31,6 +31,7 @@ export { getOptionalUser } from './get-optional-user'
 export { requireUser, requireUserAllowPendingDeletion } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
+export { activeOAuthProviders, type OAuthProvider } from './domain/oauth-providers'
 
 export { cancelAccountDeletion } from './features/account-deletion/cancel-account-deletion.handler'
 export { handleFacebookDataDeletion } from './features/account-deletion/facebook-data-deletion'
