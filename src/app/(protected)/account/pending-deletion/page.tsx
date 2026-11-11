@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic'
 async function handleCancel() {
   'use server'
   const result = await cancelAccountDeletion()
-  if (!result.ok) throw result.error
+  // Actions return plain `ActionError` data; wrap it so Next's error
+  // boundary and Sentry get a real Error with a stack.
+  if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
   redirect('/account')
 }
 

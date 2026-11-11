@@ -70,6 +70,7 @@ Full architecture in [docs/architecture.md](./docs/architecture.md).
 ## Error handling
 
 - Server actions wrapped with `withErrorBoundary` from `@/shared/lib/errors/with-error-boundary` (Sentry does not auto-instrument server actions)
+- `withErrorBoundary` also converts returned `AppError`s into plain `ActionError` objects (`{ code, message }` plus `details` / `scheduledFor` where relevant). React Flight drops Error instances to a generic message in production builds, so clients read `result.error.code` / `.message` from plain data. Expected errors returned from actions must extend `AppError`
 - Route handlers and Server Components: NOT wrapped (auto-captured via `instrumentation.ts`)
 - `Result<T, E>` for expected errors. Throw only for bugs
 

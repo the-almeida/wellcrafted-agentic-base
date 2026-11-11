@@ -49,7 +49,11 @@ test.describe('password sign-in', () => {
     // Server action returns Result(err); the form renders the message in
     // its role=alert region. Don't pin the exact text — Supabase phrases
     // it as "Invalid login credentials" today and may rephrase later.
-    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.locator('form').getByRole('alert')).toBeVisible()
+    // Scoped to the form: Next's route announcer is also role=alert (empty).
+    // Production builds replace returned Error instances with React's generic
+    // message; the action seam must hand the form real, plain error data.
+    await expect(page.locator('form').getByRole('alert')).not.toContainText('omitted in production')
     await expect(page).toHaveURL(/\/sign-in/)
   })
 })

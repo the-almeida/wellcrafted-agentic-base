@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic'
 async function handleRequestDeletion() {
   'use server'
   const result = await requestAccountDeletion()
-  if (!result.ok) throw result.error
+  // Actions return plain `ActionError` data; wrap it so Next's error
+  // boundary and Sentry get a real Error with a stack.
+  if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
   redirect('/account/pending-deletion')
 }
 

@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis'
 
+import { AppError } from '@/shared/lib/errors/base'
 import { err, ok, type Result } from '@/shared/lib/result'
 
 export type RateLimitKey = string
@@ -9,14 +10,13 @@ export type RateLimitConfig = {
   max: number
 }
 
-export class RateLimitExceededError extends Error {
+export class RateLimitExceededError extends AppError {
   readonly code = 'RATE_LIMIT_EXCEEDED' as const
   constructor(
     public readonly key: RateLimitKey,
     message = 'Rate limit exceeded',
   ) {
     super(message)
-    this.name = 'RateLimitExceededError'
   }
 }
 

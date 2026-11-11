@@ -58,7 +58,11 @@ test.describe('OTP sign-in', () => {
 
     // shouldCreateUser=false → adapter returns UnauthenticatedError →
     // form renders the message in its role=alert region.
-    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.locator('form').getByRole('alert')).toBeVisible()
+    // Scoped to the form: Next's route announcer is also role=alert (empty).
+    // Production builds replace returned Error instances with React's generic
+    // message; the action seam must hand the form real, plain error data.
+    await expect(page.locator('form').getByRole('alert')).not.toContainText('omitted in production')
     // Still on the choose stage; the verify form must NOT have rendered.
     await expect(page.getByLabel('6-digit code')).toHaveCount(0)
 

@@ -12,6 +12,7 @@ JavaScript's exception model conflates "expected errors" (validation failure, no
 - Use `Result<T, E>` (a discriminated union of `{ ok: true, value }` and `{ ok: false, error }`) for **expected errors**.
 - Use `throw` only for **true bugs** — programmer errors, invariant violations, things that should not happen if the code is correct.
 - Server actions are wrapped with `withErrorBoundary`, which catches unexpected throws, logs them, sends them to Sentry, and re-throws so Next.js handles the response. This wrapper exists specifically because Sentry's Next.js SDK does NOT auto-instrument server actions.
+- `withErrorBoundary` also converts a returned `err(AppError)` into a plain `ActionError` (`{ code, message }` plus `details` / `scheduledFor` where the client needs them). React Flight does not serialize Error instances: in production builds a returned Error reaches the browser as a generic "An error occurred in the Server Components render" Error with `code` and every other field dropped (in dev the message survives, which hides the bug until `next build`). Added 2026-11-10 after confirming this against the vendored `react-server-dom-webpack` in Next 16.2.6.
 - Route handlers and Server Components are NOT wrapped. They are auto-captured by Sentry's `onRequestError` hook (registered in `instrumentation.ts`).
 
 ## Alternatives considered
