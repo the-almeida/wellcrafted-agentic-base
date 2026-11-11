@@ -1,6 +1,6 @@
 import type { UserId } from '@/shared/lib/ids'
 
-import { getActiveDeletionRequest } from './get-active-deletion-request'
+import { getActiveDeletionRequest } from './deletion-requests'
 
 export const PENDING_DELETION_PATH = '/account/pending-deletion'
 export const ACCOUNT_HOME_PATH = '/account'

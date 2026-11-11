@@ -12,6 +12,7 @@ import {
 
 import type { User } from '../../domain/user'
 
+import { loseDeletionRequestRace, RACE_TEST_TIMEOUT_MS } from './deletion-request-race.test-helper'
 import { requestAccountDeletionForUser } from './request-account-deletion.logic'
 
 describe('requestAccountDeletionForUser', () => {
@@ -121,24 +122,23 @@ describe('requestAccountDeletionForUser', () => {
     expect(second.value.confirmationCode).not.toBe(first.value.confirmationCode)
   })
 
-  it('is concurrency-safe: parallel requests from the same user return the same row', async () => {
-    const user = await seedUser('concurrent')
+  it(
+    'returns the winning row when it loses a race to a concurrent opener',
+    async () => {
+      const user = await seedUser('race-in-app-loses')
 
-    const [a, b] = await Promise.all([
-      requestAccountDeletionForUser(user),
-      requestAccountDeletionForUser(user),
-    ])
-    if (!a.ok) throw a.error
-    if (!b.ok) throw b.error
-    createdRequestIds.push(AccountDeletionRequestIdSchema.parse(a.value.id))
+      const { outcome, winnerCode, rows } = await loseDeletionRequestRace({
+        userId: user.id,
+        winnerSource: 'facebook',
+        track: (id) => createdRequestIds.push(id),
+        run: () => requestAccountDeletionForUser(user),
+      })
 
-    expect(a.value.id).toBe(b.value.id)
-    expect(a.value.confirmationCode).toBe(b.value.confirmationCode)
-
-    const rows = await db
-      .select()
-      .from(accountDeletionRequests)
-      .where(eq(accountDeletionRequests.userId, user.id))
-    expect(rows).toHaveLength(1)
-  })
+      if (!outcome.ok) throw outcome.error
+      expect(outcome.value.confirmationCode).toBe(winnerCode)
+      expect(outcome.value.source).toBe('facebook')
+      expect(rows).toHaveLength(1)
+    },
+    RACE_TEST_TIMEOUT_MS,
+  )
 })

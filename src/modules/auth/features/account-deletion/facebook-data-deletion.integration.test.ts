@@ -13,6 +13,7 @@ import {
   type UserId,
 } from '@/shared/lib/ids'
 
+import { loseDeletionRequestRace, RACE_TEST_TIMEOUT_MS } from './deletion-request-race.test-helper'
 import { handleFacebookDataDeletion } from './facebook-data-deletion'
 
 const APP_SECRET = 'test-app-secret-do-not-use-in-prod'
@@ -161,6 +162,34 @@ describe('handleFacebookDataDeletion', () => {
       .where(eq(accountDeletionRequests.userId, userId))
     expect(rows).toHaveLength(1)
   })
+
+  it(
+    'returns the winning code when the callback loses a race to an in-app request',
+    async () => {
+      const { userId, facebookId } = await seedFacebookLinkedUser('race-fb-loses')
+      const signedRequest = createSignedRequest(
+        { algorithm: 'HMAC-SHA256', issued_at: Math.floor(Date.now() / 1000), user_id: facebookId },
+        APP_SECRET,
+      )
+
+      const { outcome, winnerCode, rows } = await loseDeletionRequestRace({
+        userId,
+        winnerSource: 'user',
+        track: (id) => createdRequestIds.push(id),
+        run: () =>
+          handleFacebookDataDeletion({
+            signedRequest,
+            appSecret: APP_SECRET,
+            statusUrlBase: STATUS_URL_BASE,
+          }),
+      })
+
+      if (!outcome.ok) throw outcome.error
+      expect(outcome.value.confirmationCode).toBe(winnerCode)
+      expect(rows).toHaveLength(1)
+    },
+    RACE_TEST_TIMEOUT_MS,
+  )
 
   it('rejects a signed_request with an invalid signature and writes nothing', async () => {
     const { userId, facebookId } = await seedFacebookLinkedUser('bad-sig')

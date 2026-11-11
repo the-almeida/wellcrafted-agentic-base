@@ -4,7 +4,7 @@ import { err, ok, type Result } from '@/shared/lib/result'
 import { authProvider } from './adapters/auth-provider.supabase'
 import { userRepository } from './adapters/user-repository.drizzle'
 import type { User } from './domain/user'
-import { getActiveDeletionRequest } from './features/account-deletion/get-active-deletion-request'
+import { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
 
 /**
  * Fail-closed: returns `UnauthenticatedError` when no Supabase session

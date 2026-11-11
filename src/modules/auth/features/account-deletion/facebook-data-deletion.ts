@@ -1,14 +1,14 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '@/shared/db/client'
-import { accountDeletionRequests } from '@/shared/db/schema/account-deletion'
-import { env } from '@/shared/lib/env'
 import { ValidationError } from '@/shared/lib/errors/base'
 import { UserIdSchema, type UserId } from '@/shared/lib/ids'
 import { err, ok, type Result } from '@/shared/lib/result'
+
+import { generateConfirmationCode, openDeletionRequest } from './deletion-requests'
 
 export type FacebookDataDeletionResponse = {
   url: string
@@ -40,10 +40,6 @@ const signedRequestPayloadSchema = z.object({
 })
 
 type SignedRequestPayload = z.infer<typeof signedRequestPayloadSchema>
-
-function generateConfirmationCode(): string {
-  return randomBytes(16).toString('base64url')
-}
 
 function buildStatusUrl(base: string, code: string): string {
   return `${base}?code=${code}`
@@ -116,21 +112,6 @@ async function findAppUserIdForFacebookId(facebookId: string): Promise<UserId | 
   return UserIdSchema.parse(row.user_id)
 }
 
-async function findActiveRequest(userId: UserId) {
-  const [row] = await db
-    .select()
-    .from(accountDeletionRequests)
-    .where(
-      and(
-        eq(accountDeletionRequests.userId, userId),
-        isNull(accountDeletionRequests.cancelledAt),
-        isNull(accountDeletionRequests.completedAt),
-      ),
-    )
-    .limit(1)
-  return row
-}
-
 export async function handleFacebookDataDeletion(
   args: Args,
 ): Promise<Result<FacebookDataDeletionResponse, ValidationError>> {
@@ -149,22 +130,12 @@ export async function handleFacebookDataDeletion(
     return ok({ url: buildStatusUrl(args.statusUrlBase, code), confirmationCode: code })
   }
 
-  const existing = await findActiveRequest(appUserId)
-  if (existing) {
-    return ok({
-      url: buildStatusUrl(args.statusUrlBase, existing.confirmationCode),
-      confirmationCode: existing.confirmationCode,
-    })
-  }
-
-  const scheduledFor = new Date(Date.now() + env.ACCOUNT_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000)
-  const confirmationCode = generateConfirmationCode()
-  await db.insert(accountDeletionRequests).values({
-    userId: appUserId,
-    scheduledFor,
-    source: 'facebook',
-    confirmationCode,
+  // Idempotent and race-safe: Facebook retries the callback, and the user
+  // may request deletion in-app at the same time. Either way there is one
+  // active request and every caller gets its confirmation code.
+  const request = await openDeletionRequest(appUserId, 'facebook')
+  return ok({
+    url: buildStatusUrl(args.statusUrlBase, request.confirmationCode),
+    confirmationCode: request.confirmationCode,
   })
-
-  return ok({ url: buildStatusUrl(args.statusUrlBase, confirmationCode), confirmationCode })
 }

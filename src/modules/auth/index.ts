@@ -35,7 +35,7 @@ export { updateSession } from './adapters/supabase/update-session'
 export { cancelAccountDeletion } from './features/account-deletion/cancel-account-deletion.handler'
 export { handleFacebookDataDeletion } from './features/account-deletion/facebook-data-deletion'
 export { findDeletionRequestByCode } from './features/account-deletion/find-deletion-request-by-code'
-export { getActiveDeletionRequest } from './features/account-deletion/get-active-deletion-request'
+export { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
 export { requestAccountDeletion } from './features/account-deletion/request-account-deletion.handler'
 export {
   ACCOUNT_HOME_PATH,
