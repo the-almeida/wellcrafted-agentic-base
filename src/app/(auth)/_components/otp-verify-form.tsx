@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 
-import { verifyOtp } from '@/modules/auth/client'
+import { SET_PASSWORD_PATH, verifyOtp } from '@/modules/auth/client'
 
 type Props = {
   /** On sign-in the page must not confirm that the email has an account. */
@@ -36,7 +36,9 @@ export function OtpVerifyForm({ flow, email, onBack }: Props) {
             setError(result.error.message)
             return
           }
-          router.push('/dashboard')
+          // The first proof of an older account's email replaced its password
+          // (see secureFirstEmailProof): offer to set a new one.
+          router.push(result.value.mustSetPassword ? SET_PASSWORD_PATH : '/dashboard')
           router.refresh()
         })
       }}

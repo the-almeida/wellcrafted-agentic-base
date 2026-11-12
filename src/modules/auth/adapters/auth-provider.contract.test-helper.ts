@@ -39,6 +39,12 @@ export type ContractSubject = {
   cleanup(emails: string[]): Promise<void>
   /** Whether an account exists for this email (checked out of band). */
   accountExists(email: string): Promise<boolean>
+  /**
+   * Setup only: a session signed in anonymously, as the browser does with
+   * "Continue without an account" (not an AuthProvider call: that sign-in
+   * never goes through the server).
+   */
+  newAnonymousSession(): Promise<AuthProvider>
 }
 
 const PASSWORD = 'contract-password-1'
@@ -240,6 +246,72 @@ export function authProviderContract(name: string, subject: ContractSubject) {
         value: { userId: expect.any(String), email, isAnonymous: false },
       })
       expect(result).toEqual(signedUp)
+    })
+
+    it('turns an anonymous session into a permanent account with the same id', async () => {
+      const email = newEmail('convert')
+      const session = await subject.newAnonymousSession()
+      const anonymous = await session.getCurrentIdentity()
+      expect(anonymous).toEqual({ userId: expect.any(String), email: null, isAnonymous: true })
+
+      const converted = await session.addEmailAndPassword({ email, password: PASSWORD })
+      const signedIn = await subject.newSession().signInWithPassword({ email, password: PASSWORD })
+
+      const permanent = { userId: anonymous?.userId, email, isAnonymous: false }
+      // Right away, with no code: email confirmations are off (supabase/config.toml).
+      expect(converted).toEqual({ ok: true, value: permanent })
+      expect(await session.getCurrentIdentity()).toEqual(permanent)
+      expect(signedIn).toEqual({ ok: true, value: permanent })
+    })
+
+    it('refuses an email another account has, and the session stays anonymous', async () => {
+      const email = newEmail('convert-taken')
+      await subject.seedUser(email, PASSWORD)
+      const session = await subject.newAnonymousSession()
+
+      const result = await session.addEmailAndPassword({ email, password: 'other-password-1' })
+
+      expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'CONFLICT',
+          message: AUTH_ERROR_MESSAGES.emailUnavailable,
+        }),
+      })
+      expect(await session.getCurrentIdentity()).toMatchObject({ isAnonymous: true, email: null })
+    })
+
+    it('replaces the password of the signed-in account', async () => {
+      const email = newEmail('replace-password')
+      await subject.seedUser(email, PASSWORD)
+      const session = subject.newSession()
+      await session.signInWithPassword({ email, password: PASSWORD })
+
+      const replaced = await session.replacePassword({ password: 'brand-new-password-1' })
+
+      expect(replaced).toEqual({ ok: true, value: undefined })
+      expect(
+        (await subject.newSession().signInWithPassword({ email, password: PASSWORD })).ok,
+      ).toBe(false)
+      expect(
+        (await subject.newSession().signInWithPassword({ email, password: 'brand-new-password-1' }))
+          .ok,
+      ).toBe(true)
+    })
+
+    it('ends the account’s other sessions and keeps the current one', async () => {
+      const email = newEmail('other-sessions')
+      await subject.seedUser(email, PASSWORD)
+      const elsewhere = subject.newSession()
+      await elsewhere.signInWithPassword({ email, password: PASSWORD })
+      const here = subject.newSession()
+      await here.signInWithPassword({ email, password: PASSWORD })
+
+      const ended = await here.endOtherSessions()
+
+      expect(ended).toEqual({ ok: true, value: undefined })
+      expect(await elsewhere.getCurrentIdentity()).toBeNull()
+      expect(await here.getCurrentIdentity()).toMatchObject({ email })
     })
   })
 }

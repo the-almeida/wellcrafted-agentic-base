@@ -1,6 +1,11 @@
 import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js'
 
-import { ExternalServiceError, UnauthenticatedError } from '@/shared/lib/errors/base'
+import {
+  ConflictError,
+  ExternalServiceError,
+  UnauthenticatedError,
+  ValidationError,
+} from '@/shared/lib/errors/base'
 import { RateLimitExceededError } from '@/shared/lib/rate-limit'
 import { logger } from '@/shared/observability/logger'
 
@@ -13,11 +18,14 @@ export type SupabaseAuthOperation =
   | 'verify'
   | 'oauth'
   | 'sign-out'
+  | 'add-email'
+  | 'replace-password'
 
 // The failures each operation expects in normal traffic, by Supabase error
 // code (auth-js `AuthApiError.code`). Matching on codes, never on message
 // text, which Supabase may reword.
 type Cause = { cause: unknown }
+const NO_DETAILS = { formErrors: [], fieldErrors: {} }
 const EXPECTED: Record<SupabaseAuthOperation, Record<string, (cause: Cause) => AuthError>> = {
   'sign-in': {
     invalid_credentials: (cause) =>
@@ -33,6 +41,17 @@ const EXPECTED: Record<SupabaseAuthOperation, Record<string, (cause: Cause) => A
   'otp-request': {},
   oauth: {},
   'sign-out': {},
+  'add-email': {
+    email_exists: (cause) => new ConflictError(AUTH_ERROR_MESSAGES.emailUnavailable, cause),
+    weak_password: (cause) =>
+      new ValidationError(NO_DETAILS, AUTH_ERROR_MESSAGES.weakPassword, cause),
+  },
+  'replace-password': {
+    same_password: (cause) =>
+      new ValidationError(NO_DETAILS, AUTH_ERROR_MESSAGES.samePassword, cause),
+    weak_password: (cause) =>
+      new ValidationError(NO_DETAILS, AUTH_ERROR_MESSAGES.weakPassword, cause),
+  },
 }
 
 /**

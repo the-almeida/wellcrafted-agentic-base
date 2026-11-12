@@ -1,7 +1,7 @@
 import { ok } from '@/shared/lib/result'
 
-import { userRepository } from '../../adapters/user-repository.drizzle'
 import type { AuthProvider } from '../../ports/auth-provider'
+import { secureFirstEmailProof } from '../email-proof'
 
 /**
  * Finishes an OAuth sign-in (Google, Facebook) after the provider redirects
@@ -23,8 +23,8 @@ export async function completeOAuthSignInWith(
   if (!result.ok) return result
 
   // OAuth accounts are never anonymous, so the email is always there.
-  if (result.value.email) {
-    await userRepository.markEmailVerified(result.value.userId, result.value.email)
-  }
-  return ok(result.value)
+  if (!result.value.email) return ok({ ...result.value, mustSetPassword: false })
+  const proof = await secureFirstEmailProof(authProvider, result.value.userId, result.value.email)
+  if (!proof.ok) return proof
+  return ok({ ...result.value, ...proof.value })
 }

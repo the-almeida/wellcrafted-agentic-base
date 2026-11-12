@@ -2,7 +2,15 @@ import { redirect } from 'next/navigation'
 
 import { Button } from '@/shared/ui/button'
 
-import { displayName, requireUser, requestAccountDeletion } from '@/modules/auth'
+import {
+  displayName,
+  formatPublicHandle,
+  requireUser,
+  requestAccountDeletion,
+} from '@/modules/auth'
+
+import { KeepAccountForm } from './keep-account-form'
+import { NicknameForm } from './nickname-form'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +37,21 @@ export default async function AccountPage() {
           Signed in as <strong>{user.email ?? displayName(user)}</strong>.
         </p>
       </header>
+
+      {user.isAnonymous ? (
+        <section className="border-border space-y-3 rounded-md border p-4">
+          <h2 className="text-lg font-semibold">Keep your account</h2>
+          <KeepAccountForm />
+        </section>
+      ) : null}
+
+      <section className="border-border space-y-3 rounded-md border p-4">
+        <h2 className="text-lg font-semibold">Public profile</h2>
+        <NicknameForm
+          handle={user.profile ? formatPublicHandle(user.profile) : null}
+          nickname={user.profile?.nickname ?? null}
+        />
+      </section>
 
       <section className="border-border space-y-3 rounded-md border p-4">
         <h2 className="text-lg font-semibold">Delete account</h2>

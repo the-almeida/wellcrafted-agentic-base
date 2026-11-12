@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { extractIpFromHeaders } from '@/shared/lib/http/request-ip'
 import { rateLimit } from '@/shared/lib/rate-limit'
 
-import { completeOAuthSignIn, oauthCallbackInputSchema } from '@/modules/auth'
+import { completeOAuthSignIn, oauthCallbackInputSchema, SET_PASSWORD_PATH } from '@/modules/auth'
 
 /**
  * OAuth callback. Providers (Google, Facebook) redirect here with
@@ -53,5 +53,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${parsed.data.from}?error=oauth_failed`)
   }
 
+  // The first proof of an older account's email replaced its password.
+  if (result.value.mustSetPassword) return NextResponse.redirect(`${origin}${SET_PASSWORD_PATH}`)
   return NextResponse.redirect(`${origin}${parsed.data.next}`)
 }

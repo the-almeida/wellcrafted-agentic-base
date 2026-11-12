@@ -1,4 +1,6 @@
-import { userRepository } from '../../adapters/user-repository.drizzle'
+import { ok } from '@/shared/lib/result'
+
+import { secureFirstEmailProof } from '../email-proof'
 import type { PublicAuthContext } from '../public-auth-context'
 import { limitPublicAuthCall } from '../public-auth-rate-limits'
 
@@ -26,6 +28,7 @@ export async function verifyOtpWith(
 
   // Entering the emailed code proves the email, including for an account
   // that was created with a password.
-  await userRepository.markEmailVerified(result.value.userId, input.email)
-  return result
+  const proof = await secureFirstEmailProof(authProvider, result.value.userId, input.email)
+  if (!proof.ok) return proof
+  return ok({ ...result.value, ...proof.value })
 }

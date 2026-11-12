@@ -1,4 +1,5 @@
 import type {
+  ConflictError,
   ExternalServiceError,
   UnauthenticatedError,
   ValidationError,
@@ -17,6 +18,7 @@ export type AuthIdentity = {
 }
 
 export type AuthError =
+  | ConflictError
   | UnauthenticatedError
   | ValidationError
   | ExternalServiceError
@@ -34,6 +36,9 @@ export const AUTH_ERROR_MESSAGES = {
   signUpFailed: 'Could not create the account. If you already have one, sign in.',
   tooManyAttempts: 'Too many attempts. Wait a minute and try again.',
   unavailable: 'Sign-in is unavailable right now. Try again.',
+  emailUnavailable: 'This email cannot be used. If it is yours, sign in with it instead.',
+  samePassword: 'Choose a password different from the current one.',
+  weakPassword: 'Choose a longer password.',
 } as const
 
 export type AuthProvider = {
@@ -65,6 +70,20 @@ export type AuthProvider = {
    * app's callback for a session, and returns who signed in.
    */
   exchangeOAuthCode(code: string): Promise<Result<AuthIdentity, AuthError>>
+  /**
+   * Makes the signed-in anonymous account permanent: same id, now with this
+   * email and password. Takes effect at once, with no code, while email
+   * confirmations are off (the email is not verified). An email another
+   * account has answers CONFLICT and leaves the account anonymous.
+   */
+  addEmailAndPassword(input: {
+    email: string
+    password: string
+  }): Promise<Result<AuthIdentity, AuthError>>
+  /** Sets a new password for the signed-in account. */
+  replacePassword(input: { password: string }): Promise<Result<void, AuthError>>
+  /** Signs the account out everywhere except this session. */
+  endOtherSessions(): Promise<Result<void, AuthError>>
   signOut(): Promise<Result<void, AuthError>>
   getCurrentIdentity(): Promise<AuthIdentity | null>
 }

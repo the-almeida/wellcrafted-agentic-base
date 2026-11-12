@@ -23,3 +23,12 @@ export function isAdmin(user: User): boolean {
 export type AccountDeletionAction = { type: 'request' } | { type: 'cancel' }
 
 export const accountDeletionPolicy: Policy<AccountDeletionAction> = () => ok(undefined)
+
+/**
+ * The caller's own public profile. Always scoped to self (the handler
+ * passes the caller's User); anonymous accounts included, since editing the
+ * nickname is the one write they have.
+ */
+export type ProfileAction = { type: 'update-nickname' }
+
+export const profilePolicy: Policy<ProfileAction> = () => ok(undefined)

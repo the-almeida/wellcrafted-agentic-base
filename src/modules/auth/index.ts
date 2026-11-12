@@ -51,4 +51,5 @@ export {
 } from './features/account-deletion/resolve-protected-redirect'
 
 export { completeOAuthSignIn } from './features/oauth-callback/oauth-callback.handler'
+export { SET_PASSWORD_PATH } from './features/set-password/set-password-path'
 export { oauthCallbackInputSchema } from './features/oauth-callback/oauth-callback.schema'

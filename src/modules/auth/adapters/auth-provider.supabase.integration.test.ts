@@ -53,8 +53,23 @@ async function newOAuthSession() {
   return createSupabaseAuthProvider(async () => newClient())
 }
 
+// Anonymous accounts have no email to clean up by, so they are tracked by id.
+const anonymousUserIds: string[] = []
+
+// What the browser does on "Continue without an account".
+async function newAnonymousSession() {
+  const newClient = newJarClient(new Map())
+  const { data, error } = await newClient().auth.signInAnonymously({
+    options: { data: { nickname: 'Contract' } },
+  })
+  if (error || !data.user) throw error ?? new Error('no anonymous user')
+  anonymousUserIds.push(data.user.id)
+  return createSupabaseAuthProvider(async () => newClient())
+}
+
 authProviderContract('Supabase, local stack', {
   newSession,
+  newAnonymousSession,
   newOAuthSession,
   async seedUser(email, password) {
     const { error } = await getAdminSupabase().auth.admin.createUser({
@@ -86,6 +101,7 @@ authProviderContract('Supabase, local stack', {
       if (data.users.length < 200) break
     }
     for (const email of wanted) await cleanupMailpitFor(email)
+    for (const id of anonymousUserIds.splice(0)) await cleanupAuthUser(id)
   },
 })
 
