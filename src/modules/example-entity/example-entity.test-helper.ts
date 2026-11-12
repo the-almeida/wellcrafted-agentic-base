@@ -23,7 +23,17 @@ export function exampleFixtures() {
       // Built from the stored row, so the role the policy sees is the one in the DB.
       const [row] = await db.select().from(users).where(eq(users.id, seeded.id))
       if (!row) throw new Error('auth trigger did not create the public.users row')
-      return { ...row, pendingDeletion: null }
+      if (!row.email || !row.name) throw new Error('seeded user has no email or name')
+      return {
+        id: row.id,
+        email: row.email,
+        name: row.name,
+        role: row.role,
+        pendingDeletion: null,
+        emailVerifiedAt: row.emailVerifiedAt,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }
     },
     async row(id: ExampleEntityId) {
       const [row] = await db.select().from(exampleEntities).where(eq(exampleEntities.id, id))

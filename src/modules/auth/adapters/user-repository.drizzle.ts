@@ -7,7 +7,14 @@ import type { UserId } from '@/shared/lib/ids'
 
 import type { User } from '../domain/user'
 
-function rowToUser(row: typeof users.$inferSelect, pendingDeletion: User['pendingDeletion']): User {
+// Anonymous accounts (and accounts converted from one, which have no name)
+// have no User shape in the app yet: they read as "no record", so
+// requireUser fails closed for them.
+function rowToUser(
+  row: typeof users.$inferSelect,
+  pendingDeletion: User['pendingDeletion'],
+): User | null {
+  if (row.isAnonymous || row.email === null || row.name === null) return null
   return {
     id: row.id,
     email: row.email,

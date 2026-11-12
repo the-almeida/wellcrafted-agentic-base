@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/shared/db/client'
@@ -113,6 +113,21 @@ describe('userRepository.findById', () => {
     const user = await userRepository.findById(userId)
 
     expect(user?.pendingDeletion).toEqual({ scheduledFor: past })
+  })
+
+  it('reads an anonymous account as no record (the app has no anonymous User yet)', async () => {
+    // The app's User has no anonymous shape yet; until it does, an
+    // anonymous row reads as "no record" (UnauthenticatedError upstream).
+    const id = UserIdSchema.parse(randomUUID())
+    await db.execute(sql`
+      INSERT INTO auth.users (id, aud, role, is_anonymous, raw_user_meta_data)
+      VALUES (${id}, 'authenticated', 'authenticated', true, '{"nickname":"Repo anon"}'::jsonb)
+    `)
+    try {
+      expect(await userRepository.findById(id)).toBeNull()
+    } finally {
+      await db.execute(sql`DELETE FROM auth.users WHERE id = ${id}`)
+    }
   })
 
   it('returns null for an unknown id', async () => {
