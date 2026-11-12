@@ -21,6 +21,37 @@ pnpm dev
 
 App runs at http://localhost:3000.
 
+`pnpm bootstrap` installs dependencies, starts the local Supabase stack (Postgres, Auth, Mailpit) in Docker, applies every migration, and writes `.env.local` with the local Supabase URL, keys, and `DATABASE_URL`. Run it once; afterwards `pnpm dev` is enough.
+
+Useful local URLs (exact ports: `pnpm supabase:status`):
+
+- Supabase Studio: http://localhost:54323
+- Mailpit (sign-up and sign-in codes land here): http://localhost:54324
+
+### Optional services
+
+Only Docker (for Supabase) is required locally. Everything else can stay blank in `.env.local`:
+
+| Service            | Env vars                                                   | When blank                                                                                |
+| ------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Sentry             | `NEXT_PUBLIC_SENTRY_DSN`                                   | Not initialized, nothing is sent                                                          |
+| PostHog            | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`      | `track()` / `track.client()` are no-ops                                                   |
+| Redis (rate limit) | `KV_REST_API_URL`, `KV_REST_API_TOKEN`                     | In-memory counter, with a startup warning                                                 |
+| Google OAuth       | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`     | "Continue with Google" button is hidden. Email sign-in still works                        |
+| Facebook OAuth     | `FACEBOOK_OAUTH_CLIENT_ID`, `FACEBOOK_OAUTH_CLIENT_SECRET` | "Continue with Facebook" button is hidden; `/api/auth/facebook/data-deletion` returns 503 |
+
+Production requirements differ (SMTP and Redis become mandatory in practice). See [docs/deployment.md](./docs/deployment.md).
+
+### Tests
+
+- `pnpm test:unit`: no external services needed
+- `pnpm test:int`: needs local Supabase running
+- `pnpm e2e`: needs local Supabase; Playwright builds and starts the app itself
+
+## Deployment
+
+Vercel (app) + Supabase cloud (database and auth). Migrations are applied manually with `supabase db push`, and CI does not deploy. Full step-by-step setup, including SMTP (Resend), env vars per environment, and OAuth: [docs/deployment.md](./docs/deployment.md).
+
 ## Architecture
 
 Modular Monolith + Vertical Slice per feature + Hexagonal (ports & adapters) at external integration points. Authorization is per-module: each module declares its own actions and policy.
@@ -48,7 +79,7 @@ Full details in [docs/architecture.md](./docs/architecture.md) and [ADR 0001](./
 3. Push (pre-push runs lint, typecheck, policy presence check, unit, integration)
 4. Open a PR (CI runs the full suite including e2e)
 5. PRs generate Vercel preview deployments automatically
-6. Merge to `main` triggers production deployment automatically
+6. Merge to `main` triggers production deployment automatically (apply new migrations first, see [docs/deployment.md](./docs/deployment.md#every-release))
 
 ## Conventions
 
@@ -77,4 +108,5 @@ See [docs/conventions.md](./docs/conventions.md).
 - [docs/architecture.md](./docs/architecture.md) — architecture details
 - [docs/conventions.md](./docs/conventions.md) — code conventions
 - [docs/dod.md](./docs/dod.md) — Definition of Done
+- [docs/deployment.md](./docs/deployment.md) — production setup (Vercel + Supabase)
 - [docs/adr/](./docs/adr) — architecture decision records
