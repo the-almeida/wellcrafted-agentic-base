@@ -17,6 +17,7 @@
  */
 
 export { OAUTH_PROVIDER_NAME, type OAuthProvider } from './domain/oauth-providers'
+export { NICKNAME_RULE, NicknameSchema } from './domain/nickname'
 export type { Role, User } from './domain/user'
 export { displayName, formatPublicHandle, type PublicProfile } from './domain/public-profile'
 

@@ -37,6 +37,7 @@ function runCheck(vars: Record<string, string>): Promise<Run> {
           NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
           GOOGLE_OAUTH_CLIENT_ID: '',
           FACEBOOK_OAUTH_CLIENT_ID: '',
+          ANONYMOUS_SIGN_INS_ENABLED: '',
           ...vars,
         },
         encoding: 'utf8',

@@ -33,6 +33,7 @@ export { requireUser, type Allowance } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
 export { warnOnAuthMisconfiguration } from './warn-on-auth-misconfiguration'
+export { anonymousSignInsEnabled } from './domain/anonymous-sign-ins'
 export {
   activeOAuthProviders,
   facebookDataDeletionSetup,
