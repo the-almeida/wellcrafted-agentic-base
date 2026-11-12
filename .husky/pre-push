@@ -1,1 +1,19 @@
+# Cloud sessions push WIP to claude/* branches every turn so the ephemeral
+# container never holds the only copy of the work. Mid-TDD (RED) the suite
+# fails by design, so tests are skipped for those pushes only. The draft PR's
+# CI runs the full suite before anything reaches main.
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  only_claude_refs=true
+  while read -r _local_ref _local_sha remote_ref _remote_sha; do
+    case "$remote_ref" in
+      refs/heads/claude/*) ;;
+      *) only_claude_refs=false ;;
+    esac
+  done
+  if [ "$only_claude_refs" = "true" ]; then
+    echo "pre-push: cloud session pushing claude/* only, tests skipped (CI runs them on the draft PR)"
+    exit 0
+  fi
+fi
+
 pnpm test --run

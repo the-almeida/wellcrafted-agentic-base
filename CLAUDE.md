@@ -177,6 +177,16 @@ For changes touching auth, authorization, payments, or PII handling: invoke `@wc
 - `pnpm db:generate --name <descriptive_slug>` — generate Drizzle migration from schema diff. Always pass `--name` so filenames are descriptive (`<timestamp>_add_audit_log.sql`), not Drizzle's random-slug default
 - `pnpm db:migrate` — apply migrations
 
+## Cloud sessions
+
+Applies only when `CLAUDE_CODE_REMOTE=true`. The container is ephemeral and reclaimed without warning; anything not pushed is lost.
+
+- Run `/wc-temp-cloud-container-handoff` after each green TDD slice and at the end of every turn that changed files. It commits, pushes, keeps a **draft PR** open and rewrites the handoff block in the PR body
+- On session start or resume with an existing branch, read the open PR's handoff block first and continue from its **Next step**
+- Screenshots and QA evidence go to a private Artifact page linked from the handoff, never into the repo
+- `pre-push` skips tests for cloud pushes to `claude/*` branches so RED states can be pushed; CI on the draft PR runs the full suite
+- The `Stop` hook (`.claude/hooks/stop-wip-check.sh`) blocks the end of a turn once when there is uncommitted or unpushed work
+
 ## Definition of Done
 
 See [docs/dod.md](./docs/dod.md). `/wc-review` and `/wc-commit` validate against this checklist.
