@@ -1,5 +1,6 @@
 // Runs before `next build` (see the "build" script in package.json). Fails the
-// build when the app's active OAuth providers and Supabase Auth disagree, or
+// build when the app's active OAuth providers and Supabase Auth disagree, when
+// Facebook is active without the secret its data deletion callback needs, or
 // when Supabase cannot be asked. Same rule locally, in CI and on deploys.
 //
 // Runs with plain Node (type stripping), so it imports only files without
@@ -8,6 +9,7 @@ import { z } from 'zod'
 
 import {
   activeOAuthProviders,
+  facebookDataDeletionSetup,
   findProviderMismatches,
 } from '../src/modules/auth/domain/oauth-providers.ts'
 
@@ -57,6 +59,8 @@ if (!parsed.success) {
 const { external } = parsed.data
 
 const problems = findProviderMismatches(activeOAuthProviders(process.env), external)
+const facebook = facebookDataDeletionSetup(process.env)
+if (facebook.status === 'missing-secret') problems.push(facebook.problem)
 if (problems.length > 0) {
   fail([
     ...problems,

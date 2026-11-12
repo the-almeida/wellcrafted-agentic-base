@@ -195,17 +195,28 @@ Supabase Auth must have exactly the same providers enabled. The app cannot set t
 
 - a supported provider is enabled in Supabase but not active in the app, or the other way round;
 - any other OAuth provider is enabled in Supabase. The app has no button for it, but anyone can still use it by calling Supabase directly with the public anon key;
+- Facebook is active but `FACEBOOK_OAUTH_CLIENT_SECRET` is not set (see below);
 - Supabase cannot be asked (not running, wrong URL or anon key, or an answer that is not the settings).
 
 Email, phone and anonymous sign-ins are not part of this check.
 
 The check runs at build time only. A provider enabled in the Supabase dashboard after a deploy goes unnoticed until the next build, so change providers through a deploy, not just in the dashboard.
 
+### Facebook data deletion callback
+
+Facebook requires a data deletion callback: when someone removes the app from their Facebook account, Facebook POSTs a `signed_request` to `/api/auth/facebook/data-deletion`, signed with the App Secret. Unlike Google's secret, which only Supabase uses, the Facebook secret is also needed by the app itself, to verify that signature. The route answers:
+
+- **404** when neither `FACEBOOK_OAUTH_CLIENT_ID` nor `FACEBOOK_OAUTH_CLIENT_SECRET` is set: the project never used Facebook.
+- **503** `facebook_data_deletion_not_configured` when Facebook is active but the secret is missing. This is a deploy mistake that loses real deletion requests, so it is also logged with `logger.error` and sent to Sentry (after the per-IP rate limit, so callers cannot flood either). The build check refuses this setup, and the server logs a warning at startup if it happens anyway (for example, the env changed after the build).
+- Otherwise it verifies the signature and records the deletion request (per-IP rate limit, 8KB body cap).
+
+The secret alone keeps the callback working. To turn Facebook sign-in off, remove the client id but **keep the secret** while anyone who signed in with Facebook still has an account: Facebook keeps calling the callback for them, and dropping those calls would lose their deletion requests.
+
 To enable a provider:
 
 1. Register the app with the provider. The redirect URI is `<SUPABASE_URL>/auth/v1/callback`.
 2. Locally: set its client id and secret in `.env.local`, set `enabled = true` in `supabase/config.toml`, and restart Supabase (`pnpm exec supabase stop && pnpm exec supabase start`); the CLI reads `.env.local` only on start.
-3. In production: enable the provider in the Supabase dashboard with the same client id and secret, and set the client id in the deploy environment.
+3. In production: enable the provider in the Supabase dashboard with the same client id and secret, and set the client id in the deploy environment. For Facebook, also set `FACEBOOK_OAUTH_CLIENT_SECRET` there (see above).
 
 ## Auth: accepted trade-offs
 

@@ -1,10 +1,12 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 
 import { env } from '@/shared/lib/env'
 import { extractIpFromHeaders } from '@/shared/lib/http/request-ip'
 import { rateLimit } from '@/shared/lib/rate-limit'
+import { logger } from '@/shared/observability/logger'
 
-import { handleFacebookDataDeletion } from '@/modules/auth'
+import { facebookDataDeletionSetup, handleFacebookDataDeletion } from '@/modules/auth'
 
 /**
  * Facebook Data Deletion Callback.
@@ -32,13 +34,12 @@ import { handleFacebookDataDeletion } from '@/modules/auth'
 const MAX_BODY_BYTES = 8 * 1024
 
 export async function POST(request: Request) {
-  // `FACEBOOK_OAUTH_CLIENT_SECRET` is Facebook's "App Secret" — the same
-  // value used both for OAuth and for signed_request HMAC verification.
-  // When unset (dev without Facebook configured), refuse the callback
-  // rather than verifying with an empty key.
-  const appSecret = env.FACEBOOK_OAUTH_CLIENT_SECRET
-  if (!appSecret) {
-    return NextResponse.json({ error: 'facebook_data_deletion_not_configured' }, { status: 503 })
+  // `FACEBOOK_OAUTH_CLIENT_SECRET` is Facebook's "App Secret", the same
+  // value used for OAuth and for signed_request HMAC verification.
+  const setup = facebookDataDeletionSetup(env)
+  if (setup.status === 'unused') {
+    // Without Facebook sign-in nobody can reach this callback legitimately.
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
   const ip = extractIpFromHeaders(request.headers)
@@ -49,6 +50,16 @@ export async function POST(request: Request) {
   if (!limit.ok) {
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 })
   }
+
+  // After the limiter: each 503 writes to the logs and Sentry.
+  if (setup.status === 'missing-secret') {
+    // A deploy mistake that loses real deletion requests: say so loudly.
+    const error = new Error(setup.problem)
+    logger.error({ err: error }, 'Facebook data deletion callback is not configured')
+    Sentry.captureException(error)
+    return NextResponse.json({ error: 'facebook_data_deletion_not_configured' }, { status: 503 })
+  }
+  const { appSecret } = setup
 
   const contentLength = Number(request.headers.get('content-length') ?? '0')
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {

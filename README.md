@@ -36,16 +36,16 @@ Only Docker (for Supabase) is required locally. Everything else can stay blank i
 | ------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Sentry             | `NEXT_PUBLIC_SENTRY_DSN`                                   | Not initialized, nothing is sent                                                          |
 | PostHog            | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`      | `track()` / `track.client()` are no-ops                                                   |
-| Redis (rate limit) | `KV_REST_API_URL`, `KV_REST_API_TOKEN`                     | In-memory counter, with a startup warning                                                 |
+| Redis (rate limit) | `KV_REST_API_URL`, `KV_REST_API_TOKEN`                     | In-memory counter, with a warning on first use                                            |
 | Google OAuth       | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`     | "Continue with Google" button is hidden. Email sign-in still works                        |
-| Facebook OAuth     | `FACEBOOK_OAUTH_CLIENT_ID`, `FACEBOOK_OAUTH_CLIENT_SECRET` | "Continue with Facebook" button is hidden; `/api/auth/facebook/data-deletion` returns 503 |
+| Facebook OAuth     | `FACEBOOK_OAUTH_CLIENT_ID`, `FACEBOOK_OAUTH_CLIENT_SECRET` | "Continue with Facebook" button is hidden; `/api/auth/facebook/data-deletion` returns 404 |
 
 Production requirements differ (SMTP and Redis become mandatory in practice). See [docs/deployment.md](./docs/deployment.md).
 
 ### Tests
 
 - `pnpm test:unit`: no external services needed
-- `pnpm test:int`: needs local Supabase running
+- `pnpm test:int`: needs local Supabase and the Redis containers (`docker compose up -d --wait`) running
 - `pnpm e2e`: needs local Supabase; Playwright builds and starts the app itself
 
 ## Deployment

@@ -34,7 +34,9 @@ const serverShape = {
   // OAuth provider credentials, optional. A set client id makes the provider
   // active: its button appears on the sign-in and sign-up pages (see
   // activeOAuthProviders). Locally, Supabase also reads them through
-  // supabase/config.toml's env() indirection.
+  // supabase/config.toml's env() indirection. FACEBOOK_OAUTH_CLIENT_SECRET is
+  // required whenever the Facebook client id is set: the data deletion
+  // callback verifies signatures with it (facebookDataDeletionSetup).
   GOOGLE_OAUTH_CLIENT_ID: optionalString,
   GOOGLE_OAUTH_CLIENT_SECRET: optionalString,
   FACEBOOK_OAUTH_CLIENT_ID: optionalString,

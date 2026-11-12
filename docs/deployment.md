@@ -59,7 +59,7 @@ Alternatives if Resend does not fit: Brevo (daily free quota), Postmark (strong 
 
 ## 4. Vercel project
 
-1. Import the GitHub repo in Vercel. The framework preset (Next.js) and the default build command work as is.
+1. Import the GitHub repo in Vercel. The framework preset (Next.js) and the default build command work as is. `pnpm build` first runs `pnpm check:oauth-providers`, which asks the Supabase project which sign-in providers are enabled and fails the build if they disagree with the app env (see [section 7](#7-oauth-providers-optional)). So the Supabase variables must be available at build time, and the project must be reachable from Vercel's build.
 2. Set the environment variables before the first deploy, either on the import screen or in Settings → Environment Variables. Without the required ones the app fails env validation. Scope them per environment (Production / Preview / Development):
 
 | Variable                                                    | Required           | Where to get it                                                                                                                                                                                                                                         |
@@ -89,7 +89,7 @@ If Preview uses the same Supabase variables as Production, every PR preview read
 
 ## 5. Redis for rate limiting
 
-This needs the Vercel project from section 4. In the project, go to Storage → Marketplace → pick a Redis provider (Upstash) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project automatically, so you do not set them by hand. Env changes only apply to new deployments: redeploy (Deployments → ⋯ → Redeploy) after connecting the store. If the log shows `[rate-limit] ... using in-memory backend` in production, the store is not connected.
+This needs the Vercel project from section 4. In the project, go to Storage → Marketplace → pick a Redis provider (Upstash) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project automatically, so you do not set them by hand. Env changes only apply to new deployments: redeploy (Deployments → ⋯ → Redeploy) after connecting the store. If the log shows `[rate-limit] in-memory rate limiting active` in production, the store is not connected.
 
 Rate limiting never blocks access to the app:
 
@@ -127,9 +127,9 @@ Each provider redirects to **Supabase**, and Supabase then redirects to the app'
 Each provider's credentials go in **two places**, with the same values:
 
 - **Supabase dashboard** (table above): Supabase Auth uses them to run the OAuth flow.
-- **Vercel env** (`GOOGLE_OAUTH_*` / `FACEBOOK_OAUTH_*`, section 4): the app uses them to decide which sign-in buttons to show. The Facebook secret also verifies data-deletion callbacks; without it that endpoint answers `503 facebook_data_deletion_not_configured`.
+- **Vercel env** (`GOOGLE_OAUTH_*` / `FACEBOOK_OAUTH_*`, section 4): the app uses them to decide which sign-in buttons to show. The Facebook secret also verifies data-deletion callbacks, so with Facebook active it is required: the build fails without it, and if it goes missing after the build the endpoint answers `503 facebook_data_deletion_not_configured` and reports to the logs and Sentry. With neither Facebook variable set, the endpoint answers 404. To turn Facebook sign-in off later, remove only the client id and keep the secret, so existing Facebook users can still request deletion through Facebook.
 
-Set only one side and the provider is either hidden (missing in Vercel) or shown but broken (missing in Supabase).
+Set only one side and the build fails, naming the provider (see [docs/conventions.md → OAuth providers](./conventions.md#oauth-providers)). The check runs at build time only: a provider changed in the Supabase dashboard after a deploy goes unnoticed until the next build, so change providers through a deploy.
 
 Then run the manual OAuth smoke in [docs/dod.md → Release checklist (auth)](./dod.md#release-checklist-auth).
 

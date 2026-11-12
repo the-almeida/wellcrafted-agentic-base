@@ -74,3 +74,31 @@ export function findProviderMismatches(
   }
   return problems
 }
+
+/**
+ * Whether the Facebook data deletion callback can work. Facebook calls it
+ * when someone removes the app from their account, signed with the App
+ * Secret, so an active Facebook provider without the secret loses those
+ * deletion requests. The secret alone keeps the callback working: a project
+ * that turns Facebook sign-in off (removes the client id) still has users
+ * who signed in with Facebook, and Facebook still calls back for them.
+ */
+export type FacebookDataDeletionSetup =
+  | { status: 'unused' }
+  | { status: 'missing-secret'; problem: string }
+  | { status: 'ready'; appSecret: string }
+
+export function facebookDataDeletionSetup(
+  env: Readonly<Record<string, unknown>>,
+): FacebookDataDeletionSetup {
+  const secret = env.FACEBOOK_OAUTH_CLIENT_SECRET
+  if (typeof secret === 'string' && secret.trim() !== '') {
+    return { status: 'ready', appSecret: secret }
+  }
+  if (!activeOAuthProviders(env).includes('facebook')) return { status: 'unused' }
+  return {
+    status: 'missing-secret',
+    problem:
+      'FACEBOOK_OAUTH_CLIENT_ID is set, but FACEBOOK_OAUTH_CLIENT_SECRET is not. The Facebook data deletion callback cannot verify requests without it.',
+  }
+}

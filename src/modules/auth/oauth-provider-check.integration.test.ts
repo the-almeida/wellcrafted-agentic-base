@@ -94,6 +94,34 @@ describe('scripts/check-oauth-providers.mts', () => {
     )
   })
 
+  it('fails the build when Facebook is active without the app secret', async () => {
+    const url = await startStub(200, settings({ facebook: true }))
+    const facebook = { NEXT_PUBLIC_SUPABASE_URL: url, FACEBOOK_OAUTH_CLIENT_ID: 'facebook-id' }
+
+    const missing = await runCheck({ ...facebook, FACEBOOK_OAUTH_CLIENT_SECRET: '' })
+    const configured = await runCheck({ ...facebook, FACEBOOK_OAUTH_CLIENT_SECRET: 'app-secret' })
+
+    expect(missing.code).toBe(1)
+    expect(missing.stderr).toContain('FACEBOOK_OAUTH_CLIENT_SECRET is not')
+    expect(missing.stderr).toContain('data deletion callback')
+    // Same Supabase answer, only the secret differs.
+    expect(configured.code).toBe(0)
+  })
+
+  it('lists the missing Facebook secret together with provider mismatches', async () => {
+    const url = await startStub(200, settings({ facebook: true, google: true }))
+
+    const run = await runCheck({
+      NEXT_PUBLIC_SUPABASE_URL: url,
+      FACEBOOK_OAUTH_CLIENT_ID: 'facebook-id',
+      FACEBOOK_OAUTH_CLIENT_SECRET: '',
+    })
+
+    expect(run.code).toBe(1)
+    expect(run.stderr).toContain('Google is enabled in Supabase, but GOOGLE_OAUTH_CLIENT_ID')
+    expect(run.stderr).toContain('FACEBOOK_OAUTH_CLIENT_SECRET is not')
+  })
+
   it('reads the settings with the anon key and never prints it', async () => {
     const url = await startStub(200, settings({ google: true }))
 

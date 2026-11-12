@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { activeOAuthProviders, findProviderMismatches } from './oauth-providers'
+import {
+  activeOAuthProviders,
+  facebookDataDeletionSetup,
+  findProviderMismatches,
+} from './oauth-providers'
 
 describe('activeOAuthProviders', () => {
   it('is empty when no provider has a client id', () => {
@@ -78,5 +82,46 @@ describe('findProviderMismatches', () => {
         supabaseExternal({ email: true, phone: true, anonymous_users: true }),
       ),
     ).toEqual([])
+  })
+})
+
+describe('facebookDataDeletionSetup', () => {
+  it.each([
+    ['nothing set', {}],
+    ['both blank', { FACEBOOK_OAUTH_CLIENT_ID: '  ', FACEBOOK_OAUTH_CLIENT_SECRET: ' ' }],
+  ])('is unused with neither a Facebook client id nor a secret (%s)', (_label, env) => {
+    expect(facebookDataDeletionSetup(env)).toEqual({ status: 'unused' })
+  })
+
+  it('stays ready with only the secret, so Facebook users keep their deletion callback', () => {
+    // Removing the client id hides the button, but people who signed in with
+    // Facebook still exist and Facebook still calls the callback for them.
+    expect(facebookDataDeletionSetup({ FACEBOOK_OAUTH_CLIENT_SECRET: 'app-secret' })).toEqual({
+      status: 'ready',
+      appSecret: 'app-secret',
+    })
+  })
+
+  it.each([
+    ['missing', {}],
+    ['empty', { FACEBOOK_OAUTH_CLIENT_SECRET: '' }],
+    ['blank', { FACEBOOK_OAUTH_CLIENT_SECRET: '   ' }],
+  ])('reports the missing secret when Facebook is active and the secret is %s', (_l, extra) => {
+    const setup = facebookDataDeletionSetup({ FACEBOOK_OAUTH_CLIENT_ID: 'facebook-id', ...extra })
+
+    expect(setup).toEqual({ status: 'missing-secret', problem: expect.any(String) })
+    const { problem } = setup as { problem: string }
+    expect(problem).toContain('FACEBOOK_OAUTH_CLIENT_ID')
+    expect(problem).toContain('FACEBOOK_OAUTH_CLIENT_SECRET')
+    expect(problem).toContain('data deletion callback')
+  })
+
+  it('is ready with the app secret when Facebook is active and the secret is set', () => {
+    expect(
+      facebookDataDeletionSetup({
+        FACEBOOK_OAUTH_CLIENT_ID: 'facebook-id',
+        FACEBOOK_OAUTH_CLIENT_SECRET: 'app-secret',
+      }),
+    ).toEqual({ status: 'ready', appSecret: 'app-secret' })
   })
 })
