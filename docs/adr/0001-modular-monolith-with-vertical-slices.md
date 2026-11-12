@@ -22,7 +22,7 @@ Combine three patterns plus a per-module authorization model:
 3. **Hexagonal (Ports & Adapters)** at the micro level — interfaces in `ports/`, implementations in `adapters/`, only when external dependencies exist
 4. **Per-module authorization** — the auth module exposes only `requireUser`, `isAdmin`, and the `Policy<T>` type. Each module declares its own action union and policy in `domain/policy.ts`
 
-Boundaries are enforced by `eslint-plugin-boundaries` in CI. Per-module policies are enforced by a CI script that fails when a module has features but no `policy.ts`.
+Boundaries are enforced by `eslint-plugin-boundaries` in CI. Per-module policies are enforced by a CI script (`scripts/check-policies.sh`) that fails when a module's features call `requireUser` but the module has no `domain/policy.ts`. The `auth` module is exempt, since it provides the policy type rather than consuming it.
 
 ## Alternatives considered
 

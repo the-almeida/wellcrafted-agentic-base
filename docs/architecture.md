@@ -92,7 +92,7 @@ The proxy (`src/proxy.ts`, Next 16's renamed middleware) AND every route run on 
 - `node:crypto`, `Buffer`, and native modules don't exist on Edge
 - The performance gain from Edge is unmeasurable for the scaffold's use cases (auth-gated app, server actions, Supabase round trips that dominate latency)
 
-The ban is enforced by `scripts/check-no-edge.sh` (runs in pre-push and CI): grep for `runtime = 'edge'` across `src/` and fail if found. To override, delete that check, document the override in an ADR, and confirm the affected route does not import Pino or rely on ALS context.
+The ban is enforced by `scripts/check-no-edge.sh` (runs in pre-commit and CI): grep for `runtime = 'edge'` across `src/` and fail if found. To override, delete that check, document the override in an ADR, and confirm the affected route does not import Pino or rely on ALS context.
 
 ## Adding a new module
 
