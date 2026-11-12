@@ -63,7 +63,8 @@ Modular Monolith + Vertical Slice + Hexagonal (ports & adapters).
 - `src/modules/<domain>/features/<feature>/` — vertical slices (handler + schema + logic + test)
 - `src/modules/<domain>/domain/` — entities, value objects, pure rules. Optional, only when invariants exist
 - `src/modules/<domain>/domain/policy.ts` — per-module authorization policy. Required when the module has handlers that perform auth checks
-- `src/modules/<domain>/ports/` and `adapters/` — only when external dependencies exist
+- `src/modules/<domain>/adapters/` — infrastructure code (SDK clients, Drizzle repositories), only when external dependencies exist
+- `src/modules/<domain>/ports/` — only with two or more real implementations, or a fake checked against the real one by a contract suite (ADR-0007). Database access uses the Drizzle repository directly, tested against the local database. Reference: `src/shared/lib/rate-limit/`
 - `src/modules/<domain>/index.ts` — public API for server code (Server Components, Server Actions, Route Handlers, proxy)
 - `src/modules/<domain>/client.ts` — public API for Client Components, only when the module has client-callable exports (ADR-0006)
 - Cross-module via `index.ts` or `client.ts` only. Boundaries enforced by `eslint-plugin-boundaries`
