@@ -1,3 +1,5 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { authProviderContract } from './auth-provider.contract.test-helper'
 import { createFakeAuth } from './auth-provider.fake.test-helper'
 
@@ -11,4 +13,16 @@ authProviderContract('in-memory fake', {
   },
   readOtp: async (email) => auth.lastCodeSentTo(email),
   cleanup: async () => {},
+})
+
+describe('createFakeAuth outside tests', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('refuses to run in production, where it would sign anyone in', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+
+    expect(() => createFakeAuth()).toThrow('fake auth provider')
+  })
 })

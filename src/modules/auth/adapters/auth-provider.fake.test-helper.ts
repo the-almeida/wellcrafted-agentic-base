@@ -17,6 +17,12 @@ import type { AuthIdentity, AuthProvider } from '../ports/auth-provider'
  * Never import this from production code (lint forbids it): it signs anyone in.
  */
 export function createFakeAuth() {
+  // Lint stops static imports from production code; this also stops
+  // dynamic ones, and anything else that slips past it.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('The fake auth provider is for tests only; it signs anyone in.')
+  }
+
   type Account = { identity: AuthIdentity; password: string | null }
   const accounts = new Map<string, Account>()
   const codes = new Map<string, string>()
