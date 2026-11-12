@@ -5,6 +5,8 @@
 #   lockfile changes mid-session).
 # - Starts the Docker daemon, which the local Supabase stack needs.
 #   Cloud containers do not run dockerd by default.
+# - Boots Supabase + next dev in the background via scripts/cloud-dev-up.sh,
+#   so the session is ready right away and localhost:3000 follows.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -27,9 +29,17 @@ if command -v dockerd >/dev/null && ! docker info >/dev/null 2>&1; then
   if ! pgrep -x dockerd >/dev/null; then
     setsid -f dockerd >/tmp/dockerd.log 2>&1 < /dev/null
   fi
-  for _ in $(seq 1 30); do
-    docker info >/dev/null 2>&1 && break
-    sleep 1
-  done
-  docker info >/dev/null 2>&1 || echo "dockerd did not start; see /tmp/dockerd.log" >&2
 fi
+
+# Boot Supabase + next dev detached so the session is not blocked.
+# cloud-dev-up.sh waits for dockerd itself.
+WC_DEV_DIR=/tmp/wc-dev
+mkdir -p "$WC_DEV_DIR"
+WC_DEV_DIR="$WC_DEV_DIR" setsid -f scripts/cloud-dev-up.sh >> "$WC_DEV_DIR/dev-up.log" 2>&1 < /dev/null
+
+# Stdout of a SessionStart hook is added to the session context.
+cat <<EOF
+Local dev stack is booting in the background (Supabase + next dev on port 3000).
+Do not start it again. Status: cat $WC_DEV_DIR/status (starting | ready | failed).
+Log: $WC_DEV_DIR/dev-up.log. Once ready, report port 3000 as the preview port.
+EOF
