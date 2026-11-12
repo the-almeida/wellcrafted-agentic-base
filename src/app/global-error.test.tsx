@@ -23,10 +23,7 @@ describe('global error page', () => {
     vi.stubEnv('NEXT_PUBLIC_POSTHOG_KEY', 'phc_test')
     const { default: GlobalError } = await import('./global-error')
 
-    // GlobalError renders its own <html>, so it mounts on the document.
-    render(<GlobalError error={Object.assign(new Error('boom'), { digest: 'abc123' })} />, {
-      container: document,
-    })
+    render(<GlobalError error={Object.assign(new Error('boom'), { digest: 'abc123' })} />)
 
     expect(capture).toHaveBeenCalledWith('critical_error_shown', {
       page: '/dashboard',

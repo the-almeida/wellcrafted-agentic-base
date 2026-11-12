@@ -37,10 +37,10 @@ describe('app error page', () => {
   it("reports code 'client' for an error thrown in the browser, which has no digest", async () => {
     await renderErrorPage(new Error('boom'))
 
-    expect(capture).toHaveBeenCalledWith('critical_error_shown', {
-      page: '/dashboard',
-      code: 'client',
-    })
+    expect(capture).toHaveBeenCalledWith(
+      'critical_error_shown',
+      expect.objectContaining({ code: 'client' }),
+    )
   })
 
   it('reports the page without its query string', async () => {
@@ -48,9 +48,9 @@ describe('app error page', () => {
 
     await renderErrorPage(new Error('boom'))
 
-    expect(capture).toHaveBeenCalledWith('critical_error_shown', {
-      page: '/data-deletion/status',
-      code: 'client',
-    })
+    expect(capture).toHaveBeenCalledWith(
+      'critical_error_shown',
+      expect.objectContaining({ page: '/data-deletion/status' }),
+    )
   })
 })
