@@ -117,7 +117,7 @@ export async function handleFacebookDataDeletion(
 ): Promise<Result<FacebookDataDeletionResponse, ValidationError>> {
   const payload = verifyAndDecodeSignedRequest(args.signedRequest, args.appSecret)
   if (!payload) {
-    return err(new ValidationError('invalid signed_request'))
+    return err(new ValidationError({ formErrors: ['invalid signed_request'], fieldErrors: {} }))
   }
 
   const appUserId = await findAppUserIdForFacebookId(payload.user_id)

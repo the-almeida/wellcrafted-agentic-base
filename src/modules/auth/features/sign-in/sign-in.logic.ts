@@ -1,5 +1,4 @@
-import { ValidationError } from '@/shared/lib/errors/base'
-import { err, ok } from '@/shared/lib/result'
+import { ok } from '@/shared/lib/result'
 import { Events } from '@/shared/observability/analytics/events'
 import { track } from '@/shared/observability/analytics/track'
 
@@ -22,7 +21,11 @@ export async function signInWith({ authProvider, ip }: PublicAuthContext, input:
 
   const user = await userRepository.findById(result.value.userId)
   if (!user) {
-    return err(new ValidationError({}, 'authenticated user has no matching profile'))
+    // The auth trigger creates this row with the account, in one
+    // transaction: a missing row is a bug. Thrown so withErrorBoundary logs
+    // it and reports it to Sentry; the session stays, but requireUser
+    // fails closed for an account without a row.
+    throw new Error(`auth user ${result.value.userId} has no public.users row`)
   }
 
   track(Events.USER_SIGNED_IN, { method: 'email' })

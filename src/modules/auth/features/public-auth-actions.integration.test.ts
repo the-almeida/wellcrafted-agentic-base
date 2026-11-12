@@ -94,16 +94,16 @@ describe('public auth actions', () => {
     })
   })
 
-  it('refuses a sign-in whose account has no profile row', async () => {
+  it('treats a signed-in account without a profile row as a bug, not a user error', async () => {
+    // The auth trigger creates the row in the same transaction as the
+    // account, so a missing row is a broken invariant: it must reach the
+    // error boundary (logs, Sentry), not be shown to the user.
     const email = uniqueEmail('no-profile')
     auth.addUser({ email, password: PASSWORD })
 
-    const result = await signInWith(deps(), { email, password: PASSWORD })
-
-    expect(result).toEqual({
-      ok: false,
-      error: expect.objectContaining({ code: 'VALIDATION_ERROR' }),
-    })
+    await expect(signInWith(deps(), { email, password: PASSWORD })).rejects.toThrow(
+      'has no public.users row',
+    )
   })
 
   it('signs up and returns the new identity', async () => {

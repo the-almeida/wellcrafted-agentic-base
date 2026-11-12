@@ -17,10 +17,20 @@ export abstract class AppError extends Error {
   }
 }
 
+/**
+ * What a ValidationError carries to the browser: the shape of Zod's
+ * `error.flatten()`, field names and messages only. Typed so nothing else
+ * (internal state, raw input) can ride along.
+ */
+export type ValidationDetails = {
+  formErrors: string[]
+  fieldErrors: Record<string, string[] | undefined>
+}
+
 export class ValidationError extends AppError {
   readonly code = 'VALIDATION_ERROR' as const
   constructor(
-    public readonly details: unknown,
+    public readonly details: ValidationDetails,
     message = 'Validation failed',
     options?: { cause?: unknown },
   ) {
