@@ -51,3 +51,16 @@ describe('parseServerEnv: rate-limit Redis credentials', () => {
     expect(parsed.error?.flatten().fieldErrors).toHaveProperty('KV_REST_API_TOKEN')
   })
 })
+
+describe('parseServerEnv: ANONYMOUS_SIGN_INS_ENABLED', () => {
+  it.each([undefined, '', 'true', 'false'])('accepts %o', (value) => {
+    expect(parseServerEnv({ ...required, ANONYMOUS_SIGN_INS_ENABLED: value }).success).toBe(true)
+  })
+
+  it('refuses to start with a value that is neither "true" nor "false"', () => {
+    const parsed = parseServerEnv({ ...required, ANONYMOUS_SIGN_INS_ENABLED: 'no' })
+
+    expect(parsed.success).toBe(false)
+    expect(parsed.error?.flatten().fieldErrors).toHaveProperty('ANONYMOUS_SIGN_INS_ENABLED')
+  })
+})

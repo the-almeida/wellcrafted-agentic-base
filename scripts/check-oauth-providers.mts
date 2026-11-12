@@ -1,12 +1,17 @@
 // Runs before `next build` (see the "build" script in package.json). Fails the
 // build when the app's active OAuth providers and Supabase Auth disagree, when
-// Facebook is active without the secret its data deletion callback needs, or
-// when Supabase cannot be asked. Same rule locally, in CI and on deploys.
+// Facebook is active without the secret its data deletion callback needs, when
+// the app's anonymous mode and Supabase's anonymous sign-ins disagree, or when
+// Supabase cannot be asked. Same rule locally, in CI and on deploys.
 //
 // Runs with plain Node (type stripping), so it imports only files without
 // path aliases or bundler-only syntax.
 import { z } from 'zod'
 
+import {
+  anonymousSignInsSetup,
+  findAnonymousSignInMismatch,
+} from '../src/modules/auth/domain/anonymous-sign-ins.ts'
 import {
   activeOAuthProviders,
   facebookDataDeletionSetup,
@@ -18,7 +23,7 @@ import {
 const SettingsSchema = z.object({ external: z.record(z.string(), z.boolean()) })
 
 function fail(lines: string[]): never {
-  console.error(['OAuth provider check failed:', ...lines.map((line) => `  - ${line}`)].join('\n'))
+  console.error(['Auth provider check failed:', ...lines.map((line) => `  - ${line}`)].join('\n'))
   process.exit(1)
 }
 
@@ -61,6 +66,13 @@ const { external } = parsed.data
 const problems = findProviderMismatches(activeOAuthProviders(process.env), external)
 const facebook = facebookDataDeletionSetup(process.env)
 if (facebook.status === 'missing-secret') problems.push(facebook.problem)
+const anonymous = anonymousSignInsSetup(process.env)
+if (anonymous.status === 'invalid') {
+  problems.push(anonymous.problem)
+} else {
+  const mismatch = findAnonymousSignInMismatch(anonymous.enabled, external)
+  if (mismatch) problems.push(mismatch)
+}
 if (problems.length > 0) {
   fail([
     ...problems,

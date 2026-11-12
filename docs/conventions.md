@@ -201,7 +201,9 @@ Supabase Auth must have exactly the same providers enabled. The app cannot set t
 - Facebook is active but `FACEBOOK_OAUTH_CLIENT_SECRET` is not set (see below);
 - Supabase cannot be asked (not running, wrong URL or anon key, or an answer that is not the settings).
 
-Email, phone and anonymous sign-ins are not part of this check.
+It also fails when the app's **anonymous mode** and Supabase's anonymous sign-ins (`external.anonymous_users`) disagree. Anonymous mode is on unless `ANONYMOUS_SIGN_INS_ENABLED=false`; any other value than `true`/`false` fails too. Off in the app but on in Supabase is refused as well: anyone with the anon key could still sign in anonymously. A new fork therefore fails its first build until anonymous sign-ins are enabled in the Supabase dashboard or the variable is set to `false`; the message names both ways out.
+
+Email and phone sign-ins are not part of this check.
 
 An OAuth sign-in records the account's email as verified (`public.users.email_verified_at`, see **verified email** in CONTEXT.md). That relies on the enabled providers returning only verified emails, which Google and Facebook do; check it before enabling another provider.
 

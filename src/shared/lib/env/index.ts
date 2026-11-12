@@ -41,6 +41,12 @@ const serverShape = {
   GOOGLE_OAUTH_CLIENT_SECRET: optionalString,
   FACEBOOK_OAUTH_CLIENT_ID: optionalString,
   FACEBOOK_OAUTH_CLIENT_SECRET: optionalString,
+  // Anonymous mode, on unless "false" (anonymousSignInsSetup). Supabase's
+  // anonymous sign-ins must match; the build checks it.
+  ANONYMOUS_SIGN_INS_ENABLED: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.enum(['true', 'false']).optional(),
+  ),
   // Optional. Without them rate-limit uses its in-memory backend (dev
   // only). See docs/conventions.md#rate-limiting.
   KV_REST_API_URL: optionalUrl,
