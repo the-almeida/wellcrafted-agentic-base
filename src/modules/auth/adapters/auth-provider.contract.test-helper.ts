@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { afterAll, describe, expect, it } from 'vitest'
 
-import type { AuthProvider } from '../ports/auth-provider'
+import { AUTH_ERROR_MESSAGES, type AuthProvider } from '../ports/auth-provider'
 
 /**
  * The behavior every `AuthProvider` implementation must share. It runs
@@ -14,9 +14,9 @@ import type { AuthProvider } from '../ports/auth-provider'
  * there: that is the reference), then made to pass on the fake. So the RED
  * of each case was observed on the fake.
  *
- * Errors are compared by `code` only, the part that reaches the client.
- * Messages are pinned separately once the adapter stops passing Supabase's
- * text through.
+ * Errors are compared by `code` and by message: both reach the browser,
+ * so the message must be one of `AUTH_ERROR_MESSAGES`, never the
+ * provider's own text.
  *
  * Kept small on purpose: the local Supabase applies its own per-IP rate
  * limits (`[auth.rate_limit]` in supabase/config.toml) and every test runs
@@ -74,7 +74,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
 
       expect(result).toEqual({
         ok: false,
-        error: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+        error: expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: AUTH_ERROR_MESSAGES.invalidCredentials,
+        }),
       })
     })
 
@@ -85,7 +88,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
 
       expect(result).toEqual({
         ok: false,
-        error: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+        error: expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: AUTH_ERROR_MESSAGES.invalidCredentials,
+        }),
       })
     })
 
@@ -99,7 +105,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
 
       expect(result).toEqual({
         ok: false,
-        error: expect.objectContaining({ code: 'EXTERNAL_SERVICE_ERROR' }),
+        error: expect.objectContaining({
+          code: 'EXTERNAL_SERVICE_ERROR',
+          message: AUTH_ERROR_MESSAGES.signUpFailed,
+        }),
       })
     })
 
@@ -152,7 +161,24 @@ export function authProviderContract(name: string, subject: ContractSubject) {
 
       expect(result).toEqual({
         ok: false,
-        error: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+        error: expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: AUTH_ERROR_MESSAGES.invalidCode,
+        }),
+      })
+    })
+
+    it('answers a code for an email with no account like a wrong code', async () => {
+      const result = await subject
+        .newSession()
+        .verifyOtp({ email: newEmail('verify-unknown'), token: '123456' })
+
+      expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'UNAUTHENTICATED',
+          message: AUTH_ERROR_MESSAGES.invalidCode,
+        }),
       })
     })
 

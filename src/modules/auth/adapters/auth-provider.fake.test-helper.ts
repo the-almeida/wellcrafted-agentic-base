@@ -4,7 +4,7 @@ import { ExternalServiceError, UnauthenticatedError } from '@/shared/lib/errors/
 import { UserIdSchema, type UserId } from '@/shared/lib/ids'
 import { err, ok } from '@/shared/lib/result'
 
-import type { AuthIdentity, AuthProvider } from '../ports/auth-provider'
+import { AUTH_ERROR_MESSAGES, type AuthIdentity, type AuthProvider } from '../ports/auth-provider'
 
 /**
  * In-memory stand-in for Supabase Auth, for tests only. It is held to the
@@ -50,14 +50,14 @@ export function createFakeAuth() {
         async signInWithPassword({ email, password }) {
           const account = accounts.get(key(email))
           if (!account || account.password !== password) {
-            return err(new UnauthenticatedError('Invalid login credentials'))
+            return err(new UnauthenticatedError(AUTH_ERROR_MESSAGES.invalidCredentials))
           }
           current = account.identity
           return ok(account.identity)
         },
         async signUpWithPassword({ email, password }) {
           if (accounts.has(key(email))) {
-            return err(new ExternalServiceError('supabase', 'User already registered'))
+            return err(new ExternalServiceError('supabase', AUTH_ERROR_MESSAGES.signUpFailed))
           }
           current = createAccount(email, password).identity
           return ok(current)
@@ -79,7 +79,7 @@ export function createFakeAuth() {
         async verifyOtp({ email, token }) {
           const account = accounts.get(key(email))
           if (!account || codes.get(key(email)) !== token) {
-            return err(new UnauthenticatedError('Token has expired or is invalid'))
+            return err(new UnauthenticatedError(AUTH_ERROR_MESSAGES.invalidCode))
           }
           codes.delete(key(email))
           current = account.identity

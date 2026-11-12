@@ -8,9 +8,10 @@ import {
 import { UserIdSchema } from '@/shared/lib/ids'
 import { err, ok, type Result } from '@/shared/lib/result'
 
-import type { AuthIdentity, AuthProvider } from '../ports/auth-provider'
+import { AUTH_ERROR_MESSAGES, type AuthIdentity, type AuthProvider } from '../ports/auth-provider'
 
 import { createSupabaseServerClient } from './supabase/server-client'
+import { mapSupabaseAuthError } from './supabase-auth-errors'
 
 function identityFromUser(supaUser: {
   id: string
@@ -37,7 +38,7 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
     async signInWithPassword({ email, password }) {
       const supabase = await getClient()
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) return err(new UnauthenticatedError(error.message, { cause: error }))
+      if (error) return err(mapSupabaseAuthError('sign-in', error))
       return identityFromUser(data.user)
     },
     async signUpWithPassword({ email, password, name }) {
@@ -47,11 +48,9 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
         password,
         options: { data: { name } },
       })
-      if (error) {
-        return err(new ExternalServiceError('supabase', error.message, { cause: error }))
-      }
+      if (error) return err(mapSupabaseAuthError('sign-up', error))
       if (!data.user) {
-        return err(new ExternalServiceError('supabase', 'sign-up did not return a user'))
+        return err(new ExternalServiceError('supabase', AUTH_ERROR_MESSAGES.unavailable))
       }
       return identityFromUser(data.user)
     },
@@ -79,24 +78,22 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
         email,
         options: { data: { name }, shouldCreateUser: true },
       })
-      if (error) {
-        return err(new ExternalServiceError('supabase', error.message, { cause: error }))
-      }
+      if (error) return err(mapSupabaseAuthError('otp-request', error))
       return ok(undefined)
     },
     async verifyOtp({ email, token }) {
       const supabase = await getClient()
       const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-      if (error) return err(new UnauthenticatedError(error.message, { cause: error }))
+      if (error) return err(mapSupabaseAuthError('verify', error))
       if (!data.user) {
-        return err(new UnauthenticatedError('verifyOtp did not return a user'))
+        return err(new ExternalServiceError('supabase', AUTH_ERROR_MESSAGES.unavailable))
       }
       return identityFromUser(data.user)
     },
     async signOut() {
       const supabase = await getClient()
       const { error } = await supabase.auth.signOut()
-      if (error) return err(new ExternalServiceError('supabase', error.message, { cause: error }))
+      if (error) return err(mapSupabaseAuthError('sign-out', error))
       return ok(undefined)
     },
     async getCurrentIdentity() {

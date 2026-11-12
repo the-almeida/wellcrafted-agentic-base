@@ -13,8 +13,9 @@ export class RateLimitExceededError extends AppError {
   constructor(
     public readonly key: RateLimitKey,
     message = 'Rate limit exceeded',
+    options?: { cause?: unknown },
   ) {
-    super(message)
+    super(message, options)
   }
 }
 
