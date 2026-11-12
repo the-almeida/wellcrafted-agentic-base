@@ -54,7 +54,7 @@ Vercel (app) + Supabase cloud (database and auth). Migrations are applied manual
 
 ## Architecture
 
-Modular Monolith + Vertical Slice per feature + Hexagonal (ports & adapters) at external integration points. Authorization is per-module: each module declares its own actions and policy.
+Modular Monolith + Vertical Slice per feature + Hexagonal (ports & adapters) where a dependency has a second, contract-checked implementation (ADR-0007). Authorization is per-module: each module declares its own actions and policy.
 
 ```
 src/

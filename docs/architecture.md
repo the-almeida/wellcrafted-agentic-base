@@ -27,9 +27,11 @@ Each user-facing capability lives in `features/<feature>/` with everything co-lo
 
 ## 3. Hexagonal Ports & Adapters (micro level)
 
-Modules declare external dependencies as interfaces in `ports/`. Concrete implementations live in `adapters/`. Domain code never imports SDKs directly.
+Infrastructure code (SDK clients, Drizzle queries) lives in `adapters/`. Domain code never imports SDKs directly.
 
-**Why**: swap providers without touching domain logic. Tests use mock adapters for determinism. Local dev can use cheap or fake adapters.
+A port (an interface in `ports/`) exists only when there are two or more real implementations, or a fake that a contract suite checks against the real one ([ADR-0007](./adr/0007-ports-need-a-second-checked-implementation.md)). Database access uses the module's Drizzle repository directly and is tested against the local database. Reference: `src/shared/lib/rate-limit/`.
+
+**Why**: a port without a second, checked implementation is a seam nothing uses. A contract-checked fake gives fast, deterministic tests that stay true to the real dependency.
 
 ## Authorization model
 
@@ -55,7 +57,8 @@ REQUIRED when handlers perform authorization:
 OPTIONAL, add only when needed:
 
 - `domain/` (other than `policy.ts`) — only when there are real invariants
-- `ports/` + `adapters/` — only when external dependencies exist
+- `adapters/` — when the module talks to infrastructure (database, SDKs)
+- `ports/` — only with a second, checked implementation (ADR-0007)
 
 Do not create empty layers "for consistency". Every layer must earn its place.
 
@@ -104,7 +107,7 @@ The ban is enforced by `scripts/check-no-edge.sh` (runs in pre-commit and CI): g
 2. Build the first feature as a vertical slice
 3. Add `domain/policy.ts` as soon as a handler needs auth checks. Define your `Action` union and export a `Policy<YourAction>` instance
 4. Add other `domain/` files only when invariants emerge
-5. Add `ports/` + `adapters/` only when an external dependency appears
+5. Put infrastructure code in `adapters/`. Add a port in `ports/` only with a second implementation or a contract-checked fake (ADR-0007)
 6. Export from `index.ts` (and `client.ts`, if Client Components need it) only what other modules legitimately need
 
 The smaller the public API, the easier the module is to evolve.

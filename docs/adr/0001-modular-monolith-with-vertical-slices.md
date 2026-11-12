@@ -1,7 +1,7 @@
 # 0001. Modular Monolith with Vertical Slices, Hexagonal Boundaries, and Per-Module Policies
 
 Date: 2026-05-13
-Status: Accepted
+Status: Accepted. Amended by [0006](./0006-module-public-surface-server-client-split.md) (public surface) and [0007](./0007-ports-need-a-second-checked-implementation.md) (ports).
 
 ## Context
 

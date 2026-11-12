@@ -183,6 +183,7 @@ Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything 
 
 ### Tests
 
+- This is the reference port ([ADR-0007](./adr/0007-ports-need-a-second-checked-implementation.md)): an interface (`limiter.ts`), two real implementations, and one contract suite they both pass. Copy its shape when a dependency earns a port
 - The same contract suite runs against both backends (`src/shared/lib/rate-limit/contract.test-helper.ts`). The Redis run uses a real Redis behind `serverless-redis-http`, which speaks the Upstash REST API, from `docker-compose.yml`
 - `pnpm dev`, `pnpm bootstrap` and CI run `docker compose up -d`. Without it the Redis tests fail with a message saying so; they are never skipped
 - The DoD verifies rate limiting on new public endpoints

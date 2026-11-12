@@ -24,7 +24,7 @@ A feature or fix is done when ALL of these are true:
 ## Architecture
 
 - [ ] Module boundaries respected (cross-module via `index.ts` or `client.ts` only)
-- [ ] Ports defined for new external integrations
+- [ ] New ports only with a second implementation or a contract-checked fake (ADR-0007)
 - [ ] Domain logic free of infra (no SDK imports in `domain/`)
 - [ ] No business logic in RLS policies
 
