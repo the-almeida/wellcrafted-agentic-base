@@ -2,14 +2,23 @@ import { eq } from 'drizzle-orm'
 
 import { db } from '@/shared/db/client'
 import { exampleEntities } from '@/shared/db/schema/example-entity'
-import type { ExampleEntityId } from '@/shared/lib/ids'
+import type { ExampleEntityId, UserId } from '@/shared/lib/ids'
 
 import type { ExampleEntity } from '../domain/example-entity'
-import type {
-  ExampleEntityRepository,
-  NewExampleEntity,
-  UpdateExampleEntity,
-} from '../ports/example-entity-repository'
+
+// Database access with no port in front: one implementation, tested
+// against the local database (ADR-0007).
+
+export type NewExampleEntity = {
+  userId: UserId
+  title: string
+  description?: string | null
+}
+
+export type UpdateExampleEntity = {
+  title?: string
+  description?: string | null
+}
 
 function rowToEntity(row: typeof exampleEntities.$inferSelect): ExampleEntity {
   return {
@@ -22,7 +31,7 @@ function rowToEntity(row: typeof exampleEntities.$inferSelect): ExampleEntity {
   }
 }
 
-export const exampleEntityRepository: ExampleEntityRepository = {
+export const exampleEntityRepository = {
   async findById(id: ExampleEntityId) {
     const [row] = await db.select().from(exampleEntities).where(eq(exampleEntities.id, id)).limit(1)
     return row ? rowToEntity(row) : null

@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto'
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { eq } from 'drizzle-orm'
 
+import { db } from '@/shared/db/client'
+import { users } from '@/shared/db/schema/auth'
 import { env } from '@/shared/lib/env'
+import { UserIdSchema, type UserId } from '@/shared/lib/ids'
 
 /**
  * Shared infrastructure for integration tests.
@@ -54,6 +58,33 @@ export function uniqueTestEmail(prefix = 'user'): string {
 export async function cleanupAuthUser(userId: string): Promise<void> {
   const supabase = getAdminSupabase()
   await supabase.auth.admin.deleteUser(userId)
+}
+
+/**
+ * Creates a confirmed auth user; the auth trigger creates its public.users
+ * row. `role: 'admin'` then promotes that row. Callers clean up with
+ * `cleanupAuthUser(id)`.
+ */
+export async function createTestUser({
+  prefix = 'user',
+  role = 'user',
+}: { prefix?: string; role?: 'user' | 'admin' } = {}): Promise<{
+  id: UserId
+  email: string
+  name: string
+  role: 'user' | 'admin'
+}> {
+  const email = uniqueTestEmail(prefix)
+  const name = `Test ${prefix}`
+  const { data, error } = await getAdminSupabase().auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { name },
+  })
+  if (error || !data.user) throw error ?? new Error('user not returned')
+  const id = UserIdSchema.parse(data.user.id)
+  if (role !== 'user') await db.update(users).set({ role }).where(eq(users.id, id))
+  return { id, email, name, role }
 }
 
 /**

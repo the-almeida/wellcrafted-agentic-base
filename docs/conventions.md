@@ -134,7 +134,7 @@ Scope when meaningful (module name): `feat(auth): add magic link sign-in`.
 
 - Auth module owns `requireUser`, `isAdmin`, `Policy<T>` type
 - Each module that has handlers needing auth checks declares its own `Action` union and `Policy` instance in `domain/policy.ts`
-- Handler order: `requireUser` → input validation → load entity from DB → call module policy → perform work
+- Handler order: `requireUser` → input validation → load entity from DB → call module policy → perform work. When the policy needs the entity, the handler stays thin (`requireUser` → validation) and hands the user to a `*.logic.ts` function that loads, authorizes and writes; that function is what the integration tests call (see `src/modules/example-entity/`)
 - The entity passed to the policy must come from the DB, never from client input
 - Always `supabase.auth.getUser()` for auth checks. `getSession()` is forbidden for authorization (it does not verify the token)
 
