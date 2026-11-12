@@ -52,6 +52,7 @@ A feature or fix is done when ALL of these are true:
 ## Migrations
 
 - [ ] If a new table was added, both the Drizzle-generated migration AND the hand-authored RLS migration are present (both live in `supabase/migrations/`)
+- [ ] New tables and functions in `public` get no API grants unless the public API needs them (then explicitly, with RLS); `src/shared/db/public-schema-exposure.integration.test.ts` stays green
 - [ ] `supabase db reset` runs cleanly locally before pushing (re-applies the full sequence)
 
 ## Observability

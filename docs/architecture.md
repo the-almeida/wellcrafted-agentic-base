@@ -80,6 +80,8 @@ Only through `<module>/index.ts` (server code) or `<module>/client.ts` (Client C
 
 Drizzle owns table structure. Supabase CLI owns RLS, triggers, functions, and extensions. Both kinds of migration land in `supabase/migrations/` and run as a single timestamp-ordered sequence under Supabase CLI's runner. See ADR-0003 for the reasoning behind this consolidation.
 
+The public API (PostgREST, reachable by anyone with the public anon key) gets nothing by default: `20261112060000_lock_down_public_schema_defaults.sql` revokes Supabase's default grants for new tables, sequences and functions in `public`, and every table has RLS on. The app uses the service role and does not need those grants. A table or function meant for the public API must be granted explicitly and protected by RLS. `src/shared/db/public-schema-exposure.integration.test.ts` checks this.
+
 Workflow for adding a new table that also needs RLS:
 
 1. Edit the Drizzle schema in `src/shared/db/schema/`
