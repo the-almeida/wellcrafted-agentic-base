@@ -26,6 +26,6 @@ export async function verifyOtpWith(
 
   // Entering the emailed code proves the email, including for an account
   // that was created with a password.
-  await userRepository.markEmailVerified(result.value.userId)
+  await userRepository.markEmailVerified(result.value.userId, input.email)
   return result
 }

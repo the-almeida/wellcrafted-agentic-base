@@ -22,6 +22,6 @@ export async function completeOAuthSignInWith(
   const result = await authProvider.exchangeOAuthCode(code)
   if (!result.ok) return result
 
-  await userRepository.markEmailVerified(result.value.userId)
+  await userRepository.markEmailVerified(result.value.userId, result.value.email)
   return ok(result.value)
 }

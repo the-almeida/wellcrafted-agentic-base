@@ -142,6 +142,30 @@ describe('public auth actions', () => {
       expect((await verifiedAt(user.id))?.getTime()).toBeGreaterThanOrEqual(before - 1_000)
     })
 
+    it("does not mark an email the person did not prove (the account's email changed)", async () => {
+      const user = await seededWithCode()
+      // The account's email is now another address; the code proves the old one.
+      await db
+        .update(users)
+        .set({ email: uniqueEmail('changed') })
+        .where(eq(users.id, user.id))
+
+      const result = await verifyOtpWith(deps(), { email: user.email, token: user.code })
+
+      expect(result.ok).toBe(true)
+      expect(await verifiedAt(user.id)).toBeNull()
+    })
+
+    it('matches the proven email regardless of case', async () => {
+      const user = await seededWithCode()
+      await db.update(users).set({ email: user.email.toUpperCase() }).where(eq(users.id, user.id))
+
+      const result = await verifyOtpWith(deps(), { email: user.email, token: user.code })
+
+      expect(result.ok).toBe(true)
+      expect(await verifiedAt(user.id)).toBeInstanceOf(Date)
+    })
+
     it('keeps the first verification time on later verifications', async () => {
       const user = await seededWithCode()
       const first = new Date('2026-01-01T00:00:00Z')
@@ -165,6 +189,21 @@ describe('public auth actions', () => {
     expect(result).toEqual({ ok: true, value: { userId: seeded.id, email: seeded.email } })
     const user = await userRepository.findById(seeded.id)
     expect(user?.emailVerifiedAt?.getTime()).toBeGreaterThanOrEqual(before - 1_000)
+  })
+
+  it("does not verify the account's email through OAuth when the provider vouched for another", async () => {
+    const seeded = await createTestUser({ prefix: 'oauth-changed' })
+    createdUserIds.push(seeded.id)
+    auth.addUser({ userId: seeded.id, email: seeded.email, password: PASSWORD })
+    await db
+      .update(users)
+      .set({ email: uniqueEmail('changed') })
+      .where(eq(users.id, seeded.id))
+
+    const result = await completeOAuthSignInWith(deps(), auth.issueOAuthCode(seeded.email))
+
+    expect(result.ok).toBe(true)
+    expect((await userRepository.findById(seeded.id))?.emailVerifiedAt).toBeNull()
   })
 
   it('sends a sign-up code to the email', async () => {

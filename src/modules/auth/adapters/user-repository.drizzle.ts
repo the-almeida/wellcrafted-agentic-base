@@ -47,13 +47,15 @@ export const userRepository = {
     return rowToUser(row.user, row.scheduledFor ? { scheduledFor: row.scheduledFor } : null)
   },
   /**
-   * Records that the person proved control of their email (a code or an
-   * OAuth sign-in). The first time wins: later calls keep it.
+   * Records that the person proved control of `provenEmail` (a code sent
+   * to it, or an OAuth provider vouching for it), only while it is still
+   * the account's email: proving an old address must not verify a new one.
+   * The first time wins: later calls keep it.
    */
-  async markEmailVerified(id: UserId) {
+  async markEmailVerified(id: UserId, provenEmail: string) {
     await db
       .update(users)
       .set({ emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())` })
-      .where(eq(users.id, id))
+      .where(and(eq(users.id, id), sql`lower(${users.email}) = lower(${provenEmail})`))
   },
 }
