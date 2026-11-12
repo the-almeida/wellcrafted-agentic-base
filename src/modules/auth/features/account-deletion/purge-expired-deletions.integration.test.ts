@@ -162,23 +162,50 @@ describe('purge_expired_account_deletions()', () => {
     expect(updatedRequest?.completedAt).not.toBeNull()
   })
 
-  it('two concurrent purge runs do not double-process the same row', async () => {
-    const userId = await seedUser('concurrent')
+  it('skips a request another transaction is processing instead of waiting for it', async () => {
+    const userId = await seedUser('locked')
     const request = await seedExpiredRequest(userId)
 
-    // Fire two purges in parallel. `FOR UPDATE SKIP LOCKED` in the
-    // function ensures one of them picks the row and the other skips
-    // it; neither should error.
-    await Promise.all([runPurge(), runPurge()])
+    // Hold the row lock the way a concurrent purge run would, then purge
+    // from another connection. With `FOR UPDATE SKIP LOCKED` the purge
+    // skips the row; without it, it waits and `lock_timeout` fails it.
+    let release!: () => void
+    const released = new Promise<void>((resolve) => (release = resolve))
+    let holding!: () => void
+    const held = new Promise<void>((resolve) => (holding = resolve))
+    const holder = db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT id FROM account_deletion_requests WHERE id = ${request.id} FOR UPDATE`,
+      )
+      holding()
+      await released
+    })
 
-    const [updatedRequest] = await db
+    // If the holder fails before locking, surface its error instead of
+    // waiting forever on `held`.
+    await Promise.race([
+      held,
+      holder.then(() => {
+        throw new Error('the holder transaction finished without holding the row')
+      }),
+    ])
+    try {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SET LOCAL lock_timeout = '2s'`)
+        await tx.execute(sql`SELECT purge_expired_account_deletions()`)
+      })
+    } finally {
+      release()
+      await holder
+    }
+
+    const [skippedRequest] = await db
       .select()
       .from(accountDeletionRequests)
       .where(eq(accountDeletionRequests.id, request.id))
-    expect(updatedRequest?.completedAt).not.toBeNull()
-
+    expect(skippedRequest?.completedAt).toBeNull()
     const remainingUser = await db.select().from(users).where(eq(users.id, userId))
-    expect(remainingUser).toHaveLength(0)
+    expect(remainingUser).toHaveLength(1)
   })
 
   it('is scheduled by pg_cron at a recurring interval', async () => {

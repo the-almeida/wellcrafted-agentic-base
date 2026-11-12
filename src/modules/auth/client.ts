@@ -2,7 +2,8 @@
  * Auth Module — client-facing surface.
  *
  * Client Components import from `@/modules/auth/client` (this file).
- * Server Components and middleware import from `@/modules/auth` (index.ts).
+ * Server Components and the proxy (`src/proxy.ts`) import from
+ * `@/modules/auth` (index.ts).
  *
  * The split exists because Next.js bundles imports through a barrel even
  * when only one named export is used. Mixing server-only utilities (which

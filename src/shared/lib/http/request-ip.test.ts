@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { extractIpFromHeaders } from './request-ip'
 
@@ -7,6 +7,35 @@ function headers(record: Record<string, string>): Headers {
 }
 
 describe('extractIpFromHeaders', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('ignores x-vercel-forwarded-for off Vercel, where a client can forge it', () => {
+    vi.stubEnv('VERCEL', undefined)
+    expect(
+      extractIpFromHeaders(
+        headers({ 'x-vercel-forwarded-for': '6.6.6.6', 'x-forwarded-for': '203.0.113.30' }),
+      ),
+    ).toBe('203.0.113.30')
+  })
+
+  it('on Vercel, prefers x-vercel-forwarded-for when an upstream proxy rewrote x-forwarded-for', () => {
+    vi.stubEnv('VERCEL', '1')
+    expect(
+      extractIpFromHeaders(
+        headers({ 'x-vercel-forwarded-for': '203.0.113.20', 'x-forwarded-for': '6.6.6.6' }),
+      ),
+    ).toBe('203.0.113.20')
+  })
+
+  it('on Vercel, falls back to x-forwarded-for when x-vercel-forwarded-for is blank', () => {
+    vi.stubEnv('VERCEL', '1')
+    expect(
+      extractIpFromHeaders(
+        headers({ 'x-vercel-forwarded-for': '   ', 'x-forwarded-for': '203.0.113.1' }),
+      ),
+    ).toBe('203.0.113.1')
+  })
+
   it('returns the first entry from x-forwarded-for', () => {
     expect(
       extractIpFromHeaders(headers({ 'x-forwarded-for': '203.0.113.1, 10.0.0.2, 10.0.0.3' })),

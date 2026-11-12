@@ -20,7 +20,8 @@ Do not skip items. Do not gloss over FAIL items. The review is worthless if it i
 ## Areas requiring extra care
 
 - **Security**: any change touching authentication, authorization, payments, or PII handling. Recommend invoking `@wc-security-auditor` if any of these were touched
-- **Boundaries**: cross-module imports must go through `index.ts` only
+- **Boundaries**: cross-module imports must go through the module's `index.ts` or `client.ts` only (ADR-0006)
+- **Stale references**: for each identifier, file, env var or SQL object removed or renamed in the diff, `git grep` the old name in comments and `.md` files. Any remaining mention is a FAIL
 - **Policies**: any module with new handlers must have `domain/policy.ts`
 - **Tests**: each new behavior has a test; RED was observed before GREEN
 - **Error handling**: server actions wrapped with `withErrorBoundary`; route handlers NOT wrapped (auto-captured); expected errors via `Result`

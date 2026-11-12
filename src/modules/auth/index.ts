@@ -1,8 +1,8 @@
 /**
  * Auth Module — server surface.
  *
- * Server Components, Server Actions, Route Handlers, and middleware import
- * from `@/modules/auth` (this file). Client Components import from
+ * Server Components, Server Actions, Route Handlers, and the proxy
+ * (`src/proxy.ts`) import from `@/modules/auth` (this file). Client Components import from
  * `@/modules/auth/client` (see `./client.ts`).
  *
  * Owns identity primitives and the cross-module authorization contract:
@@ -17,9 +17,9 @@
  * re-exported from here. Consumers import them directly from
  * `@/shared/lib/errors/base`.
  *
- * Three Supabase clients (server, browser, middleware) live under
- * `adapters/supabase/`. Session refresh happens in middleware via
- * `updateSession`. Always use `getUser()` for auth checks; `getSession()`
+ * Three Supabase clients (server, browser, and the proxy's
+ * `middleware-client`) live under `adapters/supabase/`. Session refresh
+ * happens in the proxy (`src/proxy.ts`) via `updateSession`. Always use `getUser()` for auth checks; `getSession()`
  * is unsafe (banned by lint).
  */
 

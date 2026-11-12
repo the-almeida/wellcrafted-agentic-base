@@ -27,7 +27,7 @@ Server actions live in their own `'use server'` handler files inside `features/<
 
 `eslint-plugin-boundaries` is configured to treat `(index|client).ts` as the allowed entry points for cross-module imports. The internalPath regex literally is `(index|client).ts`. Any other internal path is blocked.
 
-A module that has no client-facing surface omits `client.ts`. A module that has no server-facing surface omits `index.ts` (unusual; rate-limit is the only candidate today and it has neither).
+A module that has no client-facing surface omits `client.ts`. A module that has no server-facing surface omits `index.ts` (unusual).
 
 ## Alternatives considered
 

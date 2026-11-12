@@ -12,12 +12,13 @@ type Props = {
  * Copy varies by context:
  * - On /sign-up: the profile-permission hint is shown for
  *   `oauth_failed` because most failures here are first-time users
- *   tripping the trigger's name-required guard (Facebook with
- *   `public_profile` denied, similar Google cases).
+ *   whose provider returned no name, which the `NOT NULL` on
+ *   `public.users.name` rejects (Facebook with `public_profile`
+ *   denied, similar Google cases).
  * - On /sign-in: returning users hitting `oauth_failed` aren't usually
  *   missing a profile scope — show a neutral retry message instead.
  *
- * Supabase wraps the trigger's RAISE EXCEPTION as a generic "Database
+ * Supabase wraps the constraint violation as a generic "Database
  * error" so we can't distinguish the cause from the error string;
  * pivoting on the originating page is the next best signal.
  */

@@ -16,14 +16,14 @@ A feature or fix is done when ALL of these are true:
 - [ ] `pnpm test --run` green
 - [ ] `pnpm e2e` green (smoke)
 - [ ] `eslint-plugin-boundaries` clean (no cross-module direct imports)
-- [ ] `./scripts/check-policies.sh` clean (every module with handlers has `domain/policy.ts`)
+- [ ] `./scripts/check-policies.sh` clean (every module whose features call `requireUser` has `domain/policy.ts`; `auth` is exempt)
 - [ ] No file >300 lines (or has explicit justification)
 - [ ] No `utils/` or `common/` folders created
 - [ ] No commented-out code
 
 ## Architecture
 
-- [ ] Module boundaries respected (cross-module via `index.ts` only)
+- [ ] Module boundaries respected (cross-module via `index.ts` or `client.ts` only)
 - [ ] Ports defined for new external integrations
 - [ ] Domain logic free of infra (no SDK imports in `domain/`)
 - [ ] No business logic in RLS policies
@@ -77,6 +77,6 @@ A feature or fix is done when ALL of these are true:
 OAuth providers cannot be exercised in CI — Google and Facebook both rate-limit unattended traffic, require real user accounts, and are flaky under headless 2FA. The integration and e2e suites cover the parts of OAuth we own (input validation, the `exchangeCodeForSession` path, the same-origin `next` redirect). The provider round-trip itself must be smoked manually before any production deploy that touches auth.
 
 - [ ] Real Google sign-in against staging completes and lands the user on `/dashboard` with `public.users.name` populated from the Google profile
-- [ ] Real Facebook sign-in against staging completes the same flow. If the user denies the `public_profile` scope, the trigger rejects the insert and the app redirects to `/sign-in?error=oauth_failed`; the `AuthErrorBanner` hint about granting the profile permission is visible (#24)
+- [ ] Real Facebook sign-in against staging completes the same flow. If the user denies the `public_profile` scope during sign-up, the `NOT NULL` on `public.users.name` rejects the new user and the app redirects back to `/sign-up?error=oauth_failed`, where the `AuthErrorBanner` hint about granting the profile permission is visible
 - [ ] Both providers' redirect URIs in the provider consoles point at Supabase (`https://<project-ref>.supabase.co/auth/v1/callback`), and the Supabase redirect allow-list covers the app callback (`https://<host>/auth/callback`). See [deployment.md](./deployment.md#7-oauth-providers-optional)
-- [ ] If `SUPABASE_AUTH_EXTERNAL_*` env vars changed, the Supabase project's auth settings reflect them
+- [ ] If `GOOGLE_OAUTH_*` / `FACEBOOK_OAUTH_*` env vars changed, the Supabase project's auth settings reflect them

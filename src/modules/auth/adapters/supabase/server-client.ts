@@ -19,7 +19,8 @@ export async function createSupabaseServerClient() {
         } catch (error) {
           // `cookies().set()` throws when called from a Server Component
           // (Next.js: cookies are read-only there). This is expected, and
-          // middleware refreshes the session on the next request, so we
+          // the proxy (`src/proxy.ts`) refreshes the session on the next
+          // request, so we
           // intentionally no-op for that specific case.
           //
           // Any other error indicates an actual problem that should surface.

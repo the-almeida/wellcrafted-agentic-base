@@ -14,9 +14,10 @@ import { exchangeOauthCode, oauthCallbackInputSchema } from '@/modules/auth'
  * On failure we bounce the user back to whichever page initiated the
  * OAuth flow (`?from=/sign-in` or `?from=/sign-up`) so the error banner
  * appears in the right context — `/sign-up` mentions the profile
- * permission (likely cause for first-time users hitting #24's trigger
- * rejection); `/sign-in` shows neutral retry copy. The `from` value is
- * allow-listed in the schema to prevent open-redirect abuse.
+ * permission (likely cause for first-time users whose provider returned
+ * no name, which the `NOT NULL` on `public.users.name` rejects);
+ * `/sign-in` shows neutral retry copy. The `from` value is allow-listed
+ * in the schema to prevent open-redirect abuse.
  *
  * Per-IP rate-limited (60s window, 30 callbacks). No email available at
  * this stage, so IP is the only key. Generous limit because legitimate
@@ -45,10 +46,10 @@ export async function GET(request: Request) {
 
   const result = await exchangeOauthCode(parsed.data.code)
   if (!result.ok) {
-    // Includes the trigger-rejected "no name" case — Supabase wraps the
-    // trigger RAISE EXCEPTION as a generic "Database error" so we can't
-    // distinguish it here. The originating page's banner shows the
-    // appropriate hint.
+    // Includes the "no name" case — Supabase wraps the `NOT NULL`
+    // violation on `public.users.name` as a generic "Database error",
+    // so we can't distinguish it here. The originating page's banner
+    // shows the appropriate hint.
     return NextResponse.redirect(`${origin}${parsed.data.from}?error=oauth_failed`)
   }
 
