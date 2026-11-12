@@ -32,7 +32,7 @@ export default async function PendingDeletionPage() {
   // The protected layout already sends users with no active request away
   // from this page, and both read the same per-render resolution. This
   // check is for the type, and in case the layout ever stops running.
-  const userResult = await requireUser({ access: 'grace-period' })
+  const userResult = await requireUser({ allow: ['anonymous', 'pending-deletion'] })
   if (!userResult.ok) redirect('/sign-in')
 
   const pending = userResult.value.pendingDeletion

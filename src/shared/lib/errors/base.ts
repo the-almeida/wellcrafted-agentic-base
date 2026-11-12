@@ -77,6 +77,14 @@ export class AccountPendingDeletionError extends AppError {
   }
 }
 
+/** The caller has an anonymous account, and this needs a permanent one. */
+export class PermanentAccountRequiredError extends AppError {
+  readonly code = 'PERMANENT_ACCOUNT_REQUIRED' as const
+  constructor(message = 'This needs a permanent account', options?: { cause?: unknown }) {
+    super(message, options)
+  }
+}
+
 export class ExternalServiceError extends AppError {
   readonly code = 'EXTERNAL_SERVICE_ERROR' as const
   constructor(
@@ -95,4 +103,5 @@ export type AppErrorCode =
   | ForbiddenError['code']
   | ConflictError['code']
   | AccountPendingDeletionError['code']
+  | PermanentAccountRequiredError['code']
   | ExternalServiceError['code']

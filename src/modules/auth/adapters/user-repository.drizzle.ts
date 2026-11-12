@@ -7,18 +7,18 @@ import type { UserId } from '@/shared/lib/ids'
 
 import type { User } from '../domain/user'
 
-// Anonymous accounts (and accounts converted from one, which have no name)
-// have no User shape in the app yet: they read as "no record", so
-// requireUser fails closed for them.
-function rowToUser(
-  row: typeof users.$inferSelect,
-  pendingDeletion: User['pendingDeletion'],
-): User | null {
-  if (row.isAnonymous || row.email === null || row.name === null) return null
+// The database checks keep the row coherent (email unless anonymous,
+// nickname and discriminator together), so this only maps it.
+function rowToUser(row: typeof users.$inferSelect, pendingDeletion: User['pendingDeletion']): User {
   return {
     id: row.id,
+    isAnonymous: row.isAnonymous,
     email: row.email,
     name: row.name,
+    profile:
+      row.nickname !== null && row.discriminator !== null
+        ? { nickname: row.nickname, discriminator: row.discriminator }
+        : null,
     role: row.role,
     pendingDeletion,
     emailVerifiedAt: row.emailVerifiedAt,

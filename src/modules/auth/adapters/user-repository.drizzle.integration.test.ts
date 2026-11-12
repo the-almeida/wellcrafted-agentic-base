@@ -51,7 +51,13 @@ describe('userRepository.findById', () => {
 
     const user = await userRepository.findById(userId)
 
-    expect(user).toMatchObject({ id: userId, name: 'Repo test', pendingDeletion: null })
+    expect(user).toMatchObject({
+      id: userId,
+      name: 'Repo test',
+      isAnonymous: false,
+      profile: null,
+      pendingDeletion: null,
+    })
   })
 
   it('returns a new account as not having verified its email', async () => {
@@ -115,16 +121,23 @@ describe('userRepository.findById', () => {
     expect(user?.pendingDeletion).toEqual({ scheduledFor: past })
   })
 
-  it('reads an anonymous account as no record (the app has no anonymous User yet)', async () => {
-    // The app's User has no anonymous shape yet; until it does, an
-    // anonymous row reads as "no record" (UnauthenticatedError upstream).
+  it('returns an anonymous account with its public profile and no email', async () => {
     const id = UserIdSchema.parse(randomUUID())
     await db.execute(sql`
       INSERT INTO auth.users (id, aud, role, is_anonymous, raw_user_meta_data)
       VALUES (${id}, 'authenticated', 'authenticated', true, '{"nickname":"Repo anon"}'::jsonb)
     `)
     try {
-      expect(await userRepository.findById(id)).toBeNull()
+      const user = await userRepository.findById(id)
+
+      expect(user).toMatchObject({
+        id,
+        isAnonymous: true,
+        email: null,
+        name: null,
+        emailVerifiedAt: null,
+        profile: { nickname: 'Repo anon', discriminator: expect.any(Number) },
+      })
     } finally {
       await db.execute(sql`DELETE FROM auth.users WHERE id = ${id}`)
     }

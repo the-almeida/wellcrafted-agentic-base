@@ -16,12 +16,20 @@ describe('identityFromSupabaseUser', () => {
   it('returns the identity of a user with an email and a uuid id', () => {
     expect(identityFromSupabaseUser({ id, email: 'someone@example.test' })).toEqual({
       ok: true,
-      value: { userId: id, email: 'someone@example.test' },
+      value: { userId: id, email: 'someone@example.test', isAnonymous: false },
+    })
+  })
+
+  it('returns the identity of an anonymous user, who has no email', () => {
+    expect(identityFromSupabaseUser({ id, email: null, is_anonymous: true })).toEqual({
+      ok: true,
+      value: { userId: id, email: null, isAnonymous: true },
     })
   })
 
   it.each([
     ['no email', { id, email: null }],
+    ['no email and is not anonymous', { id, email: '', is_anonymous: false }],
     ['a non-uuid id', { id: 'not-a-uuid', email: 'someone@example.test' }],
   ])('answers a user with %s like a provider failure, logging no email', (_label, user) => {
     const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined)

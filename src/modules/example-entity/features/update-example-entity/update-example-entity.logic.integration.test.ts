@@ -70,4 +70,14 @@ describe('updateExampleEntityFor', () => {
     expect(result.ok).toBe(true)
     expect(await fixtures.row(entity.id)).toMatchObject({ title: 'Moderated' })
   })
+
+  it('refuses an anonymous owner and leaves the entity unchanged', async () => {
+    const guest = await fixtures.anonymousUser()
+    const entity = await fixtures.insertEntityFor(guest)
+
+    const result = await updateExampleEntityFor(guest, { id: entity.id, title: 'Renamed' })
+
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: 'FORBIDDEN' }) })
+    expect(await fixtures.row(entity.id)).toMatchObject({ title: 'Original' })
+  })
 })

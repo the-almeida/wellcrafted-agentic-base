@@ -9,7 +9,9 @@ import { resolveProtectedRouteRedirect } from './resolve-protected-redirect'
 function user(pendingDeletion: User['pendingDeletion']): User {
   return {
     id: UserIdSchema.parse('00000000-0000-4000-8000-000000000001'),
+    isAnonymous: false,
     email: 'someone@example.test',
+    profile: null,
     name: 'Someone',
     role: 'user',
     pendingDeletion,

@@ -20,4 +20,13 @@ describe('createExampleEntityFor', () => {
       description: 'About it',
     })
   })
+
+  it('refuses an anonymous account and stores nothing', async () => {
+    const guest = await fixtures.anonymousUser()
+
+    const result = await createExampleEntityFor(guest, { title: 'Nope' })
+
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: 'FORBIDDEN' }) })
+    expect(await fixtures.count(guest)).toBe(0)
+  })
 })

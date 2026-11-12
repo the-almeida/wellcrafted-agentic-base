@@ -9,7 +9,7 @@ import { requireUser } from '../../require-user'
 import { requestAccountDeletionForUser } from './request-account-deletion.logic'
 
 export const requestAccountDeletion = withErrorBoundary(async () => {
-  const userResult = await requireUser({ access: 'grace-period' })
+  const userResult = await requireUser({ allow: ['anonymous', 'pending-deletion'] })
   if (!userResult.ok) return userResult
 
   const authz = accountDeletionPolicy(userResult.value, { type: 'request' })

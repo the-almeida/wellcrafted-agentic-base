@@ -14,7 +14,7 @@ export function isAdmin(user: User): boolean {
  *
  * Any authenticated user can request or cancel deletion of their own
  * account; the action is implicitly scoped to self because the handlers
- * pass the caller's User (from `requireUser({ access: 'grace-period' })`) into
+ * pass the caller's User (from `requireUser({ allow: ['anonymous', 'pending-deletion'] })`) into
  * the policy and downstream logic. The policy still exists so that
  * future restrictions (e.g. "admin accounts cannot self-delete") have a
  * single place to live, and so that the boilerplate's "every handler

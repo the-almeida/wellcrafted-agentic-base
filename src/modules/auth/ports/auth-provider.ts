@@ -11,7 +11,9 @@ export type OAuthProvider = 'google' | 'facebook'
 
 export type AuthIdentity = {
   userId: UserId
-  email: string
+  /** Null only for anonymous accounts. */
+  email: string | null
+  isAnonymous: boolean
 }
 
 export type AuthError =

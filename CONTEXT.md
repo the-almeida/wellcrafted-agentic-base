@@ -12,7 +12,11 @@ This file holds the project's shared vocabulary. Terms here are canonical — co
 
 **pending deletion** — State of an account that has an active (non-cancelled, non-completed) deletion request. On sign-in, users in this state are redirected to `/account/pending-deletion` where they can cancel or sign out.
 
-**access level** — What a signed-in caller may do given their account state. **full** (the default) admits only active accounts; **grace-period** also admits accounts pending deletion, for the flows that must keep working during the grace period (the pending-deletion page, cancelling or re-requesting deletion). Independent of role: an admin pending deletion is refused full access too. Anonymous mode will add a level.
+**access level** — Which account states a caller lets through (`requireUser({ allow })`). The default admits only permanent, active accounts. Each allowance adds one state: **anonymous** admits anonymous accounts (pages they may see, deleting the account); **pending-deletion** admits accounts pending deletion, for the flows that must keep working during the grace period (the pending-deletion page, cancelling or re-requesting deletion). Independent of role: an admin pending deletion is refused by default too.
+
+**anonymous account** — An account created by Supabase's anonymous sign-in, with no email or name: only a public profile. It can see and be seen, and edit its own nickname; every other write is refused. It becomes a **permanent account** (same id, same profile) when an email and password are added. Kept until the person asks for deletion, like any account.
+
+**public profile** — How an account is shown to others: nickname plus a **discriminator** (1–9999, drawn at random), shown as `Wolf #0042`. The pair is unique (nickname compared case-insensitively). Required for anonymous accounts, optional for permanent ones.
 
 **purge** — The terminal step of a deletion request: delete from `auth.users`, allowing `ON DELETE CASCADE` foreign keys to drop owned data. Runs on a `pg_cron` schedule reading `account_deletion_requests` where `scheduled_for < now()`.
 

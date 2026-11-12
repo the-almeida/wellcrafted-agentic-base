@@ -65,7 +65,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
       })
       const signedIn = await subject.newSession().signInWithPassword({ email, password: PASSWORD })
 
-      expect(signedUp).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+      expect(signedUp).toEqual({
+        ok: true,
+        value: { userId: expect.any(String), email, isAnonymous: false },
+      })
       expect(signedIn).toEqual(signedUp)
       // Signed in right away. Holds while email confirmations are off
       // (supabase/config.toml); turning them on must fail this line.
@@ -140,7 +143,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
       })
       const verified = await session.verifyOtp({ email, token: await subject.readOtp(email) })
 
-      expect(verified).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+      expect(verified).toEqual({
+        ok: true,
+        value: { userId: expect.any(String), email, isAnonymous: false },
+      })
       // Verifying the code is what signs the browser in.
       expect(await session.getCurrentIdentity()).toEqual(verified.ok && verified.value)
     })
@@ -229,7 +235,10 @@ export function authProviderContract(name: string, subject: ContractSubject) {
       const result = await subject.newSession().signInWithPassword({ email, password: PASSWORD })
 
       // Stored lowercased, and the same account either way.
-      expect(signedUp).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+      expect(signedUp).toEqual({
+        ok: true,
+        value: { userId: expect.any(String), email, isAnonymous: false },
+      })
       expect(result).toEqual(signedUp)
     })
   })

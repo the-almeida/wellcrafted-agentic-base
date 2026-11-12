@@ -11,7 +11,13 @@ export type ExampleAction =
   | { type: 'update'; entity: ExampleEntity }
   | { type: 'delete'; entity: ExampleEntity }
 
+// Anonymous accounts can see, not write: checked first, so owning the
+// entity does not let one through. (They are never admins: a database
+// check keeps their role 'user'.)
 export const examplePolicy: Policy<ExampleAction> = (user, action) => {
+  if (user.isAnonymous && action.type !== 'read') {
+    return err(new ForbiddenError(`anonymous accounts cannot ${action.type}`))
+  }
   if (isAdmin(user)) return ok(undefined)
 
   switch (action.type) {

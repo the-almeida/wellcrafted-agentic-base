@@ -26,9 +26,10 @@
 export type { Policy } from './domain/policy'
 export { isAdmin } from './domain/policy'
 export type { Role, User } from './domain/user'
+export { displayName, formatPublicHandle, type PublicProfile } from './domain/public-profile'
 
 export { getOptionalUser } from './get-optional-user'
-export { requireUser, type Access } from './require-user'
+export { requireUser, type Allowance } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
 export { warnOnAuthMisconfiguration } from './warn-on-auth-misconfiguration'

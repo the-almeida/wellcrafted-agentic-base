@@ -32,7 +32,11 @@ export function createFakeAuth() {
 
   function createAccount(email: string, password: string | null, userId?: UserId): Account {
     const account: Account = {
-      identity: { userId: userId ?? UserIdSchema.parse(randomUUID()), email: key(email) },
+      identity: {
+        userId: userId ?? UserIdSchema.parse(randomUUID()),
+        email: key(email),
+        isAnonymous: false,
+      },
       password,
     }
     accounts.set(key(email), account)

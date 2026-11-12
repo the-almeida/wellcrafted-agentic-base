@@ -111,7 +111,10 @@ describe('public auth actions', () => {
 
     const result = await signUpWith(deps(), { email, password: PASSWORD, name: 'New' })
 
-    expect(result).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+    expect(result).toEqual({
+      ok: true,
+      value: { userId: expect.any(String), email, isAnonymous: false },
+    })
   })
 
   describe('verifying a code records that the email is verified', () => {
@@ -186,7 +189,10 @@ describe('public auth actions', () => {
 
     const result = await completeOAuthSignInWith(deps(), auth.issueOAuthCode(seeded.email))
 
-    expect(result).toEqual({ ok: true, value: { userId: seeded.id, email: seeded.email } })
+    expect(result).toEqual({
+      ok: true,
+      value: { userId: seeded.id, email: seeded.email, isAnonymous: false },
+    })
     const user = await userRepository.findById(seeded.id)
     expect(user?.emailVerifiedAt?.getTime()).toBeGreaterThanOrEqual(before - 1_000)
   })
