@@ -91,6 +91,8 @@ If Preview uses the same Supabase variables as Production, every PR preview read
 
 This needs the Vercel project from section 4. In the project, go to Storage → Marketplace → pick a Redis provider (Upstash) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project automatically, so you do not set them by hand. Env changes only apply to new deployments: redeploy (Deployments → ⋯ → Redeploy) after connecting the store. If the log shows `[rate-limit] ... using in-memory backend` in production, the store is not connected.
 
+On the first deploy with the store connected, sign in once and confirm it succeeds. The limiter sends `INCR` + `PEXPIRE ... NX` in one `MULTI`, which CI only exercises against a fake client, never a real Upstash database.
+
 Rate limiting never blocks access to the app:
 
 - **Store not connected:** the in-memory fallback is used, and everything works without real protection.
