@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/shared/db/client'
 import { users } from '@/shared/db/schema/auth'
-import { cleanupAuthUser, createTestUser, getAdminSupabase } from '@/shared/db/test-helpers'
+import { cleanupAuthUser, createTestUser } from '@/shared/db/test-helpers'
 import type { UserId } from '@/shared/lib/ids'
 
 import { createFakeAuth } from '../adapters/auth-provider.fake.test-helper'
@@ -317,16 +317,13 @@ describe('public auth actions', () => {
 // never owned the email (Confirm email is off): on the first proof of the
 // email, whoever proved it keeps the account.
 describe('first proof of an unverified email', () => {
-  // A real account with a password, mirrored in the fake. `ageMinutes`
+  // An unverified account (public.users row, read by the rule) with a
+  // password in the fake (what the assertions sign in with). `ageMinutes`
   // backdates it: a prompt for a new password only makes sense for an
   // account that existed before this sign-in.
   async function unverifiedAccount({ ageMinutes }: { ageMinutes: number }) {
     const seeded = await createTestUser({ prefix: 'first-proof' })
     createdUserIds.push(seeded.id)
-    const { error } = await getAdminSupabase().auth.admin.updateUserById(seeded.id, {
-      password: PASSWORD,
-    })
-    if (error) throw error
     await db
       .update(users)
       .set({ createdAt: new Date(Date.now() - ageMinutes * 60_000) })

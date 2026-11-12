@@ -42,19 +42,23 @@ const row = async (id: UserId) => (await db.select().from(users).where(eq(users.
 
 describe('updateNicknameFor', () => {
   it('stores the new nickname with a newly drawn discriminator', async () => {
-    const guest = await anonymousUser('Wolf')
+    const guest = await anonymousUser(`Wolf${randomUUID().slice(0, 6)}`)
+    const current = guest.profile?.discriminator ?? 0
+    // Another account already is "Fox #<the guest's current number>", so
+    // keeping the number would collide: only a fresh draw succeeds.
+    const fox = await anonymousUser(`Fox${randomUUID().slice(0, 6)}`)
+    const nickname = fox.profile?.nickname ?? ''
+    await db.update(users).set({ discriminator: current }).where(eq(users.id, fox.id))
 
-    const result = await updateNicknameFor(guest, { nickname: 'Fox' })
+    const result = await updateNicknameFor(guest, { nickname })
 
-    expect(result).toEqual({
-      ok: true,
-      value: { nickname: 'Fox', discriminator: expect.any(Number) },
-    })
-    expect(await row(guest.id)).toMatchObject({ nickname: 'Fox' })
+    expect(result).toEqual({ ok: true, value: { nickname, discriminator: expect.any(Number) } })
     if (!result.ok) return
-    expect(result.value.discriminator).toBeGreaterThanOrEqual(1)
-    expect(result.value.discriminator).toBeLessThanOrEqual(9999)
-    expect((await row(guest.id))?.discriminator).toBe(result.value.discriminator)
+    expect(result.value.discriminator).not.toBe(current)
+    expect(await row(guest.id)).toMatchObject({
+      nickname,
+      discriminator: result.value.discriminator,
+    })
   })
 
   it('keeps the discriminator when only the letter case changes', async () => {
