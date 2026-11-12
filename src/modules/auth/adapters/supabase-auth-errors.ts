@@ -6,7 +6,13 @@ import { logger } from '@/shared/observability/logger'
 
 import { AUTH_ERROR_MESSAGES, type AuthError } from '../ports/auth-provider'
 
-export type SupabaseAuthOperation = 'sign-in' | 'sign-up' | 'otp-request' | 'verify' | 'sign-out'
+export type SupabaseAuthOperation =
+  | 'sign-in'
+  | 'sign-up'
+  | 'otp-request'
+  | 'verify'
+  | 'oauth'
+  | 'sign-out'
 
 // The failures each operation expects in normal traffic, by Supabase error
 // code (auth-js `AuthApiError.code`). Matching on codes, never on message
@@ -25,6 +31,7 @@ const EXPECTED: Record<SupabaseAuthOperation, Record<string, (cause: Cause) => A
       new ExternalServiceError('supabase', AUTH_ERROR_MESSAGES.signUpFailed, cause),
   },
   'otp-request': {},
+  oauth: {},
   'sign-out': {},
 }
 

@@ -1,16 +1,22 @@
 import { randomUUID } from 'node:crypto'
 
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { db } from '@/shared/db/client'
+import { users } from '@/shared/db/schema/auth'
 import { cleanupAuthUser, createTestUser } from '@/shared/db/test-helpers'
+import type { UserId } from '@/shared/lib/ids'
 
 import { createFakeAuth } from '../adapters/auth-provider.fake.test-helper'
+import { userRepository } from '../adapters/user-repository.drizzle'
 import type { AuthProvider } from '../ports/auth-provider'
 
 import { requestSignInOtpWith } from './request-sign-in-otp/request-sign-in-otp.logic'
 import { requestSignUpOtpWith } from './request-sign-up-otp/request-sign-up-otp.logic'
 import { signInWith } from './sign-in/sign-in.logic'
 import { signUpWith } from './sign-up/sign-up.logic'
+import { completeOAuthSignInWith } from './oauth-callback/oauth-callback.logic'
 import { verifyOtpWith } from './verify-otp/verify-otp.logic'
 
 // The public auth actions (no session required) with the contract-checked
@@ -106,6 +112,59 @@ describe('public auth actions', () => {
     const result = await signUpWith(deps(), { email, password: PASSWORD, name: 'New' })
 
     expect(result).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+  })
+
+  describe('verifying a code records that the email is verified', () => {
+    async function seededWithCode() {
+      const seeded = await createTestUser({ prefix: 'verify' })
+      createdUserIds.push(seeded.id)
+      auth.addUser({ userId: seeded.id, email: seeded.email, password: PASSWORD })
+      await requestSignInOtpWith(deps(), { email: seeded.email })
+      return { ...seeded, code: auth.lastCodeSentTo(seeded.email) }
+    }
+    const verifiedAt = async (id: UserId) => (await userRepository.findById(id))?.emailVerifiedAt
+
+    it('sets it on the right code, and a wrong code changes nothing', async () => {
+      const user = await seededWithCode()
+      const wrong = user.code === '000000' ? '111111' : '000000'
+
+      const refused = await verifyOtpWith(deps(), { email: user.email, token: wrong })
+      expect(refused).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
+      })
+      expect(await verifiedAt(user.id)).toBeNull()
+
+      const before = Date.now()
+      const result = await verifyOtpWith(deps(), { email: user.email, token: user.code })
+
+      expect(result.ok).toBe(true)
+      expect((await verifiedAt(user.id))?.getTime()).toBeGreaterThanOrEqual(before - 1_000)
+    })
+
+    it('keeps the first verification time on later verifications', async () => {
+      const user = await seededWithCode()
+      const first = new Date('2026-01-01T00:00:00Z')
+      await db.update(users).set({ emailVerifiedAt: first }).where(eq(users.id, user.id))
+
+      const result = await verifyOtpWith(deps(), { email: user.email, token: user.code })
+
+      expect(result.ok).toBe(true)
+      expect(await verifiedAt(user.id)).toEqual(first)
+    })
+  })
+
+  it('completes an OAuth sign-in and records the email as verified by the provider', async () => {
+    const seeded = await createTestUser({ prefix: 'oauth' })
+    createdUserIds.push(seeded.id)
+    auth.addUser({ userId: seeded.id, email: seeded.email, password: PASSWORD })
+    const before = Date.now()
+
+    const result = await completeOAuthSignInWith(deps(), auth.issueOAuthCode(seeded.email))
+
+    expect(result).toEqual({ ok: true, value: { userId: seeded.id, email: seeded.email } })
+    const user = await userRepository.findById(seeded.id)
+    expect(user?.emailVerifiedAt?.getTime()).toBeGreaterThanOrEqual(before - 1_000)
   })
 
   it('sends a sign-up code to the email', async () => {

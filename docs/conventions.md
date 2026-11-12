@@ -203,6 +203,8 @@ Supabase Auth must have exactly the same providers enabled. The app cannot set t
 
 Email, phone and anonymous sign-ins are not part of this check.
 
+An OAuth sign-in records the account's email as verified (`public.users.email_verified_at`, see **verified email** in CONTEXT.md). That relies on the enabled providers returning only verified emails, which Google and Facebook do; check it before enabling another provider.
+
 The check runs at build time only. A provider enabled in the Supabase dashboard after a deploy goes unnoticed until the next build, so change providers through a deploy, not just in the dashboard.
 
 ### Facebook data deletion callback

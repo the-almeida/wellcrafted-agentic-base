@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { extractIpFromHeaders } from '@/shared/lib/http/request-ip'
 import { rateLimit } from '@/shared/lib/rate-limit'
 
-import { exchangeOauthCode, oauthCallbackInputSchema } from '@/modules/auth'
+import { completeOAuthSignIn, oauthCallbackInputSchema } from '@/modules/auth'
 
 /**
  * OAuth callback. Providers (Google, Facebook) redirect here with
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/sign-in?error=invalid_callback`)
   }
 
-  const result = await exchangeOauthCode(parsed.data.code)
+  const result = await completeOAuthSignIn(parsed.data.code)
   if (!result.ok) {
     // Includes the "no name" case — Supabase wraps the `NOT NULL`
     // violation on `public.users.name` as a generic "Database error",

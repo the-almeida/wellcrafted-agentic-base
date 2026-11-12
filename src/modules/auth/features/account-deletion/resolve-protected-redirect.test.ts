@@ -13,6 +13,7 @@ function user(pendingDeletion: User['pendingDeletion']): User {
     name: 'Someone',
     role: 'user',
     pendingDeletion,
+    emailVerifiedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   }

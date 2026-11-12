@@ -48,5 +48,5 @@ export {
   resolveProtectedRouteRedirect,
 } from './features/account-deletion/resolve-protected-redirect'
 
-export { exchangeOauthCode } from './features/oauth-callback/oauth-callback.handler'
+export { completeOAuthSignIn } from './features/oauth-callback/oauth-callback.handler'
 export { oauthCallbackInputSchema } from './features/oauth-callback/oauth-callback.schema'

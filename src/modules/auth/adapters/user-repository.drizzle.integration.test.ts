@@ -54,6 +54,14 @@ describe('userRepository.findById', () => {
     expect(user).toMatchObject({ id: userId, name: 'Repo test', pendingDeletion: null })
   })
 
+  it('returns a new account as not having verified its email', async () => {
+    // Supabase confirms the email of admin-created users, but only the app
+    // records a verification the person actually made (code or OAuth).
+    const userId = await seedUser()
+
+    expect(await userRepository.findById(userId)).toMatchObject({ emailVerifiedAt: null })
+  })
+
   it.each<DeletionRequestSource>(['user', 'facebook'])(
     'returns the scheduled date of an active request opened by %s',
     async (source) => {

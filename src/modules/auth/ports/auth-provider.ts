@@ -58,6 +58,11 @@ export type AuthProvider = {
    */
   requestSignUpOtp(input: { email: string; name: string }): Promise<Result<void, AuthError>>
   verifyOtp(input: { email: string; token: string }): Promise<Result<AuthIdentity, AuthError>>
+  /**
+   * Finishes an OAuth sign-in: trades the code the provider sent back to the
+   * app's callback for a session, and returns who signed in.
+   */
+  exchangeOAuthCode(code: string): Promise<Result<AuthIdentity, AuthError>>
   signOut(): Promise<Result<void, AuthError>>
   getCurrentIdentity(): Promise<AuthIdentity | null>
 }

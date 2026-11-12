@@ -9,6 +9,8 @@ export type User = {
   role: Role
   /** Set while the account has an active deletion request (grace period). */
   pendingDeletion: { scheduledFor: Date } | null
+  /** When the person proved control of the email; null when not known. */
+  emailVerifiedAt: Date | null
   createdAt: Date
   updatedAt: Date
 }

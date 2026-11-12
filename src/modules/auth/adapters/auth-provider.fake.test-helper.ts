@@ -26,6 +26,7 @@ export function createFakeAuth() {
   type Account = { identity: AuthIdentity; password: string | null }
   const accounts = new Map<string, Account>()
   const codes = new Map<string, string>()
+  const oauthCodes = new Map<string, string>()
 
   const key = (email: string) => email.trim().toLowerCase()
 
@@ -83,6 +84,16 @@ export function createFakeAuth() {
           current = account.identity
           return ok(account.identity)
         },
+        async exchangeOAuthCode(code) {
+          const email = oauthCodes.get(code)
+          const account = email ? accounts.get(key(email)) : undefined
+          if (!account) {
+            return err(new ExternalServiceError('supabase', AUTH_ERROR_MESSAGES.unavailable))
+          }
+          oauthCodes.delete(code)
+          current = account.identity
+          return ok(account.identity)
+        },
         async signOut() {
           current = null
           return ok(undefined)
@@ -107,6 +118,18 @@ export function createFakeAuth() {
       userId?: UserId
     }): AuthIdentity {
       return createAccount(email, password, userId).identity
+    },
+
+    /**
+     * Setup only: an OAuth code as a provider would send it back to the
+     * app's callback, for an existing account. Local Supabase cannot run a
+     * real provider, so this path exists on the fake only.
+     */
+    issueOAuthCode(email: string): string {
+      if (!accounts.has(key(email))) throw new Error(`no account for ${email}`)
+      const code = randomUUID()
+      oauthCodes.set(code, email)
+      return code
     },
 
     /** Whether an account exists for this email (test inspection only). */

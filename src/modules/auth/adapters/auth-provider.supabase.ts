@@ -83,6 +83,14 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
       }
       return identityFromUser(data.user)
     },
+    async exchangeOAuthCode(code) {
+      // Uses the PKCE verifier cookie set by signInWithOAuth and writes the
+      // session cookies on the app origin.
+      const supabase = await getClient()
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) return err(mapSupabaseAuthError('oauth', error))
+      return identityFromUser(data.user)
+    },
     async signOut() {
       const supabase = await getClient()
       const { error } = await supabase.auth.signOut()

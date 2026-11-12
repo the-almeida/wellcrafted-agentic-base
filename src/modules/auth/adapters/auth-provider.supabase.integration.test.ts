@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { isAuthApiError } from '@supabase/supabase-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -19,9 +20,8 @@ import { createSupabaseAuthProvider } from './auth-provider.supabase'
 // an in-memory cookie jar. Like the app (a new server client per call, over
 // the request's cookies), every call builds a fresh client over the jar, so
 // anything that carries over between calls has to go through the cookies.
-function newSession() {
-  const jar = new Map<string, string>()
-  const newClient = () =>
+function newJarClient(jar: Map<string, string>) {
+  return () =>
     createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
       cookies: {
         getAll: () => [...jar].map(([name, value]) => ({ name, value })),
@@ -33,11 +33,29 @@ function newSession() {
         },
       },
     })
+}
+
+function newSession() {
+  const newClient = newJarClient(new Map())
+  return createSupabaseAuthProvider(async () => newClient())
+}
+
+// Starts an OAuth sign-in on the jar. With skipBrowserRedirect this only
+// stores the PKCE verifier cookie (the provider is never contacted), so a
+// later exchange reaches Supabase's /token endpoint.
+async function newOAuthSession() {
+  const newClient = newJarClient(new Map())
+  const { error } = await newClient().auth.signInWithOAuth({
+    provider: 'google',
+    options: { skipBrowserRedirect: true },
+  })
+  if (error) throw error
   return createSupabaseAuthProvider(async () => newClient())
 }
 
 authProviderContract('Supabase, local stack', {
   newSession,
+  newOAuthSession,
   async seedUser(email, password) {
     const { error } = await getAdminSupabase().auth.admin.createUser({
       email,
@@ -111,5 +129,20 @@ describe('Supabase adapter when Supabase cannot be reached', () => {
 
   it('treats the session as signed out', async () => {
     expect(await down.getCurrentIdentity()).toBeNull()
+  })
+})
+
+describe('Supabase adapter OAuth exchange', () => {
+  it('lets Supabase itself reject a forged code (not the client, for a missing verifier)', async () => {
+    vi.spyOn(logger, 'error').mockImplementation(() => undefined)
+    const session = await newOAuthSession()
+
+    const result = await session.exchangeOAuthCode('not-a-real-code')
+
+    expect(result.ok).toBe(false)
+    const cause = (result as { error: { cause: unknown } }).error.cause
+    expect(isAuthApiError(cause)).toBe(true)
+    expect((cause as { status: number }).status).toBeGreaterThanOrEqual(400)
+    expect((cause as { status: number }).status).toBeLessThan(500)
   })
 })

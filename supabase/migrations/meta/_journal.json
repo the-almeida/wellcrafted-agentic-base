@@ -15,6 +15,13 @@
       "when": 1778865960169,
       "tag": "20260515172600_add_account_deletion_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794470382533,
+      "tag": "20261112075942_add_users_email_verified_at",
+      "breakpoints": true
     }
   ]
 }

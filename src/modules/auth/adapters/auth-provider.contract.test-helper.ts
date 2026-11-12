@@ -25,6 +25,12 @@ import { AUTH_ERROR_MESSAGES, type AuthProvider } from '../ports/auth-provider'
 export type ContractSubject = {
   /** A provider with its own, empty session. */
   newSession(): AuthProvider
+  /**
+   * A session in the middle of an OAuth sign-in: the browser state a
+   * provider redirect comes back to (for Supabase, the PKCE verifier
+   * cookie), so an exchange is decided by the server, not the client.
+   */
+  newOAuthSession(): Promise<AuthProvider>
   /** Setup only: a confirmed user that can sign in with this password. */
   seedUser(email: string, password: string): Promise<void>
   /** The 6-digit code most recently sent to `email`. */
@@ -181,6 +187,22 @@ export function authProviderContract(name: string, subject: ContractSubject) {
         error: expect.objectContaining({
           code: 'UNAUTHENTICATED',
           message: AUTH_ERROR_MESSAGES.invalidCode,
+        }),
+      })
+    })
+
+    // Only the rejection is contract-checked: the local Supabase has no
+    // working OAuth provider, so the success path exists on the fake only.
+    it('rejects an OAuth code it did not issue', async () => {
+      const session = await subject.newOAuthSession()
+
+      const result = await session.exchangeOAuthCode('not-a-real-code')
+
+      expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'EXTERNAL_SERVICE_ERROR',
+          message: AUTH_ERROR_MESSAGES.unavailable,
         }),
       })
     })

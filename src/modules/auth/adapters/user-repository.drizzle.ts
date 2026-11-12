@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/shared/db/client'
 import { accountDeletionRequests, activeDeletionRequest } from '@/shared/db/schema/account-deletion'
@@ -14,6 +14,7 @@ function rowToUser(row: typeof users.$inferSelect, pendingDeletion: User['pendin
     name: row.name,
     role: row.role,
     pendingDeletion,
+    emailVerifiedAt: row.emailVerifiedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -37,5 +38,15 @@ export const userRepository = {
       .limit(1)
     if (!row) return null
     return rowToUser(row.user, row.scheduledFor ? { scheduledFor: row.scheduledFor } : null)
+  },
+  /**
+   * Records that the person proved control of their email (a code or an
+   * OAuth sign-in). The first time wins: later calls keep it.
+   */
+  async markEmailVerified(id: UserId) {
+    await db
+      .update(users)
+      .set({ emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())` })
+      .where(eq(users.id, id))
   },
 }
