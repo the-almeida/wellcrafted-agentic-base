@@ -116,18 +116,23 @@ describe('anonymous accounts in public.users', () => {
     },
   )
 
+  // A nickname no other account has (accounts from earlier runs stay in the
+  // local database), so its whole number range is this test's to fill.
+  const unusedNickname = () => `Crowd${randomUUID().slice(0, 8)}`
+
   it('draws the only free discriminator, treating nicknames case-insensitively', async () => {
+    const nickname = unusedNickname()
     const free = await inRolledBackTransaction(async (tx) => {
       // Replica mode skips triggers and foreign keys, so 9,998 mirror rows
       // can be written directly; the transaction is rolled back.
       await tx.execute(sql`SET LOCAL session_replication_role = replica`)
       await tx.execute(sql`
         INSERT INTO public.users (id, email, name, is_anonymous, nickname, discriminator)
-        SELECT gen_random_uuid(), NULL, NULL, true, 'Wolf', n
+        SELECT gen_random_uuid(), NULL, NULL, true, ${nickname}, n
         FROM generate_series(1, 9999) AS n WHERE n <> 4321
       `)
       const [result] = await tx.execute<{ free: number | null }>(
-        sql`SELECT public.free_discriminator('wOLF') AS free`,
+        sql`SELECT public.free_discriminator(${nickname.toUpperCase()}) AS free`,
       )
       return result?.free
     })
@@ -136,17 +141,19 @@ describe('anonymous accounts in public.users', () => {
   })
 
   it('refuses a new account whose nickname has every discriminator taken', async () => {
+    const nickname = unusedNickname()
     const outcome = await inRolledBackTransaction(async (tx) => {
       await tx.execute(sql`SET LOCAL session_replication_role = replica`)
       await tx.execute(sql`
         INSERT INTO public.users (id, email, name, is_anonymous, nickname, discriminator)
-        SELECT gen_random_uuid(), NULL, NULL, true, 'Wolf', n FROM generate_series(1, 9999) AS n
+        SELECT gen_random_uuid(), NULL, NULL, true, ${nickname}, n FROM generate_series(1, 9999) AS n
       `)
       await tx.execute(sql`SET LOCAL session_replication_role = origin`)
       return refusingConstraint(
         tx.execute(sql`
           INSERT INTO auth.users (id, aud, role, is_anonymous, raw_user_meta_data)
-          VALUES (gen_random_uuid(), 'authenticated', 'authenticated', true, '{"nickname":"wolf"}'::jsonb)
+          VALUES (gen_random_uuid(), 'authenticated', 'authenticated', true,
+                  ${JSON.stringify({ nickname: nickname.toLowerCase() })}::jsonb)
         `),
       )
     })
@@ -180,7 +187,6 @@ describe('anonymous accounts in public.users', () => {
     const before = await row(id)
     const email = uniqueTestEmail('converted')
 
-    // The order Supabase Auth uses: the email first, then is_anonymous.
     await db.execute(sql`UPDATE auth.users SET email = ${email} WHERE id = ${id}`)
     await db.execute(sql`UPDATE auth.users SET is_anonymous = false WHERE id = ${id}`)
 
@@ -191,5 +197,20 @@ describe('anonymous accounts in public.users', () => {
       nickname: 'Owl',
       discriminator: before?.discriminator,
     })
+  })
+
+  it('follows a conversion that clears is_anonymous before the email arrives', async () => {
+    // What updateUser({ email, password }) does (observed on the local
+    // stack): is_anonymous goes false in one UPDATE, the email lands in a
+    // later one. The mirror stays anonymous until there is an email.
+    const id = await insertAnonymousAuthUser({ nickname: 'Owl' })
+    const email = uniqueTestEmail('converted')
+
+    await db.execute(sql`UPDATE auth.users SET is_anonymous = false WHERE id = ${id}`)
+    const between = await row(id)
+    await db.execute(sql`UPDATE auth.users SET email = ${email} WHERE id = ${id}`)
+
+    expect(between).toMatchObject({ isAnonymous: true, email: null })
+    expect(await row(id)).toMatchObject({ email, isAnonymous: false, nickname: 'Owl' })
   })
 })
