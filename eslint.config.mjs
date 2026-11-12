@@ -6,6 +6,11 @@ import boundaries from 'eslint-plugin-boundaries'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import playwright from 'eslint-plugin-playwright'
 
+const FOLDER_NAME_PATTERNS = [
+  { group: ['**/utils/**'], message: 'Use shared/lib/<category>/ instead' },
+  { group: ['**/common/**'], message: 'Use shared/lib/<category>/ instead' },
+]
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -114,8 +119,12 @@ const eslintConfig = defineConfig([
         'error',
         {
           patterns: [
-            { group: ['**/utils/**'], message: 'Use shared/lib/<category>/ instead' },
-            { group: ['**/common/**'], message: 'Use shared/lib/<category>/ instead' },
+            ...FOLDER_NAME_PATTERNS,
+            {
+              group: ['**/*.test-helper', '**/test-helpers'],
+              message:
+                'Test helpers (fakes, fixtures, the admin client) are for tests only; a fake auth provider in production signs anyone in.',
+            },
           ],
         },
       ],
@@ -135,6 +144,19 @@ const eslintConfig = defineConfig([
       ],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+    },
+  },
+  {
+    // Tests and test helpers may import test helpers. Flat config does not
+    // merge rule options, so the folder-name patterns are restated.
+    files: [
+      '**/*.test.{ts,tsx}',
+      '**/*.integration.test.{ts,tsx}',
+      '**/*.test-helper.ts',
+      'src/shared/db/test-helpers.ts',
+    ],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: FOLDER_NAME_PATTERNS }],
     },
   },
   {
