@@ -1,54 +1,49 @@
 import { AccountPendingDeletionError, UnauthenticatedError } from '@/shared/lib/errors/base'
 import { err, ok, type Result } from '@/shared/lib/result'
 
-import { authProvider } from './adapters/auth-provider.supabase'
-import { userRepository } from './adapters/user-repository.drizzle'
 import type { User } from './domain/user'
-import { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
+import { resolveCurrentUser } from './resolve-current-user'
 
 /**
- * Fail-closed: returns `UnauthenticatedError` when no Supabase session
- * exists or the session-bearing user has no matching `public.users` row.
+ * What a caller may do with an account in each state:
  *
- * Also fails with `AccountPendingDeletionError` for users with an active
- * account deletion request. This is the boilerplate default: business
- * actions refuse pending users automatically, no per-handler check
- * required. The two flows that legitimately operate during the grace
- * window (cancel deletion, sign out) use
- * `requireUserAllowPendingDeletion` instead.
+ *   - `full` (default): an active account only. Accounts pending deletion
+ *     fail with `AccountPendingDeletionError`, so business actions refuse
+ *     them without per-handler checks.
+ *   - `grace-period`: also lets accounts pending deletion through, for the
+ *     flows that must keep working during the grace period (the
+ *     pending-deletion page, cancelling or re-requesting the deletion, and
+ *     the protected layout that routes those users to that page).
  *
- * Uses Supabase's `getUser()` (which round-trips to the auth API and verifies
- * the JWT). `getSession()` is unsafe for authorization (banned by lint).
+ * Open for more levels (anonymous mode adds one).
  */
-export async function requireUser(): Promise<
+export type Access = 'full' | 'grace-period'
+
+/**
+ * Fail-closed: `UnauthenticatedError` when there is no Supabase session or
+ * the session's user has no `public.users` row. Uses Supabase's `getUser()`
+ * (verifies the JWT); `getSession()` is unsafe for authorization and banned
+ * by lint.
+ */
+export async function requireUser({ access = 'full' }: { access?: Access } = {}): Promise<
   Result<User, UnauthenticatedError | AccountPendingDeletionError>
 > {
-  const identityResult = await requireUserAllowPendingDeletion()
-  if (!identityResult.ok) return identityResult
+  const current = await resolveCurrentUser()
+  if (current.status === 'signed-out') return err(new UnauthenticatedError('not authenticated'))
+  if (current.status === 'no-record') return err(new UnauthenticatedError('user record not found'))
 
-  const active = await getActiveDeletionRequest(identityResult.value.id)
-  if (active) {
-    return err(new AccountPendingDeletionError(active.scheduledFor))
+  const { user } = current
+  switch (access) {
+    case 'full':
+      if (user.pendingDeletion) {
+        return err(new AccountPendingDeletionError(user.pendingDeletion.scheduledFor))
+      }
+      return ok(user)
+    case 'grace-period':
+      return ok(user)
+    default: {
+      const unknown: never = access
+      throw new Error(`unknown access level: ${String(unknown)}`)
+    }
   }
-  return identityResult
-}
-
-/**
- * Identity-only variant: confirms there is an authenticated user and a
- * matching `public.users` row, but does NOT reject users with a pending
- * account deletion. Use only for flows that must remain available during
- * the grace window (cancel deletion, request deletion idempotency, sign out).
- */
-export async function requireUserAllowPendingDeletion(): Promise<
-  Result<User, UnauthenticatedError>
-> {
-  const identity = await authProvider.getCurrentIdentity()
-  if (!identity) {
-    return err(new UnauthenticatedError('not authenticated'))
-  }
-  const user = await userRepository.findById(identity.userId)
-  if (!user) {
-    return err(new UnauthenticatedError('user record not found'))
-  }
-  return ok(user)
 }

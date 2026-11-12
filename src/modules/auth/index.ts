@@ -28,7 +28,7 @@ export { isAdmin } from './domain/policy'
 export type { Role, User } from './domain/user'
 
 export { getOptionalUser } from './get-optional-user'
-export { requireUser, requireUserAllowPendingDeletion } from './require-user'
+export { requireUser, type Access } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
 export { warnOnAuthMisconfiguration } from './warn-on-auth-misconfiguration'
@@ -41,7 +41,6 @@ export {
 export { cancelAccountDeletion } from './features/account-deletion/cancel-account-deletion.handler'
 export { handleFacebookDataDeletion } from './features/account-deletion/facebook-data-deletion'
 export { findDeletionRequestByCode } from './features/account-deletion/find-deletion-request-by-code'
-export { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
 export { requestAccountDeletion } from './features/account-deletion/request-account-deletion.handler'
 export {
   ACCOUNT_HOME_PATH,

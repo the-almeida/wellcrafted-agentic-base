@@ -12,6 +12,8 @@ This file holds the project's shared vocabulary. Terms here are canonical — co
 
 **pending deletion** — State of an account that has an active (non-cancelled, non-completed) deletion request. On sign-in, users in this state are redirected to `/account/pending-deletion` where they can cancel or sign out.
 
+**access level** — What a signed-in caller may do given their account state. **full** (the default) admits only active accounts; **grace-period** also admits accounts pending deletion, for the flows that must keep working during the grace period (the pending-deletion page, cancelling or re-requesting deletion). Independent of role: an admin pending deletion is refused full access too. Anonymous mode will add a level.
+
 **purge** — The terminal step of a deletion request: delete from `auth.users`, allowing `ON DELETE CASCADE` foreign keys to drop owned data. Runs on a `pg_cron` schedule reading `account_deletion_requests` where `scheduled_for < now()`.
 
 **confirmation code** — Random 16-byte URL-safe token stored on each `account_deletion_requests` row. Used as the public handle for Facebook's status URL (`/data-deletion/status?code=…`). Distinct from the row UUID so internal IDs are not exposed.

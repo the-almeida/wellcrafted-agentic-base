@@ -51,6 +51,7 @@ describe('requestAccountDeletionForUser', () => {
       email: data.user.email!,
       name: `Logic ${prefix}`,
       role: 'user' as const,
+      pendingDeletion: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

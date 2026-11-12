@@ -2,11 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { Button } from '@/shared/ui/button'
 
-import {
-  cancelAccountDeletion,
-  getActiveDeletionRequest,
-  requireUserAllowPendingDeletion,
-} from '@/modules/auth'
+import { ACCOUNT_HOME_PATH, cancelAccountDeletion, requireUser } from '@/modules/auth'
 import { signOut } from '@/modules/auth/client'
 
 export const dynamic = 'force-dynamic'
@@ -33,15 +29,14 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 })
 
 export default async function PendingDeletionPage() {
-  // The protected layout already redirects users with no active request
-  // away from this page, but render-time defensive reads handle the race
-  // where the request is cancelled in another tab between the layout
-  // check and this page rendering.
-  const userResult = await requireUserAllowPendingDeletion()
+  // The protected layout already sends users with no active request away
+  // from this page, and both read the same per-render resolution. This
+  // check is for the type, and in case the layout ever stops running.
+  const userResult = await requireUser({ access: 'grace-period' })
   if (!userResult.ok) redirect('/sign-in')
 
-  const active = await getActiveDeletionRequest(userResult.value.id)
-  if (!active) redirect('/account')
+  const pending = userResult.value.pendingDeletion
+  if (!pending) redirect(ACCOUNT_HOME_PATH)
 
   return (
     <section className="mx-auto max-w-xl space-y-6">
@@ -49,7 +44,7 @@ export default async function PendingDeletionPage() {
         <h1 className="text-2xl font-bold">Account scheduled for deletion</h1>
         <p className="text-muted-foreground text-sm">
           Your account will be permanently deleted on{' '}
-          <strong>{dateFormatter.format(active.scheduledFor)} UTC</strong>. Until then, you can
+          <strong>{dateFormatter.format(pending.scheduledFor)} UTC</strong>. Until then, you can
           cancel the deletion and continue using your account normally.
         </p>
       </header>

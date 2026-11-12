@@ -1,27 +1,30 @@
 import { randomBytes } from 'node:crypto'
 
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/shared/db/client'
 import {
   accountDeletionRequests,
+  activeDeletionRequest,
   type AccountDeletionRequestRow,
 } from '@/shared/db/schema/account-deletion'
 import { env } from '@/shared/lib/env'
 import type { UserId } from '@/shared/lib/ids'
 
 /**
- * Single owner of the "account deletion request" lifecycle rules shared by
- * every entry point (self-serve request, Facebook data-deletion callback,
- * the `requireUser` gate and the protected-route redirect):
+ * Single owner of the "account deletion request" lifecycle operations shared
+ * by every entry point (self-serve request, Facebook data-deletion callback):
  *
- *   - what "active" means (not cancelled, not completed);
  *   - how the grace period turns into `scheduledFor`;
  *   - how confirmation codes are generated;
  *   - idempotency: at most one active request per user, and opening a
  *     request when one is active returns the existing row;
  *   - concurrency: two openers racing past the precheck both observe the
  *     same row instead of one of them failing.
+ *
+ * What "active" means lives with the table (`activeDeletionRequest()` in
+ * the schema, next to the unique index that enforces it), because the user
+ * repository also joins on it to load the account state in one query.
  *
  * Callers decide authentication/authorization and response shape; they do
  * not touch `account_deletion_requests` directly.
@@ -60,13 +63,7 @@ export async function getActiveDeletionRequest(
   const [row] = await db
     .select()
     .from(accountDeletionRequests)
-    .where(
-      and(
-        eq(accountDeletionRequests.userId, userId),
-        isNull(accountDeletionRequests.cancelledAt),
-        isNull(accountDeletionRequests.completedAt),
-      ),
-    )
+    .where(and(eq(accountDeletionRequests.userId, userId), activeDeletionRequest()))
     .limit(1)
   return row ?? null
 }

@@ -51,6 +51,7 @@ describe('cancelAccountDeletionForUser', () => {
       email: data.user.email!,
       name: `Cancel ${prefix}`,
       role: 'user' as const,
+      pendingDeletion: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

@@ -4,12 +4,12 @@ import { withErrorBoundary } from '@/shared/lib/errors/with-error-boundary'
 import { rateLimit } from '@/shared/lib/rate-limit'
 
 import { accountDeletionPolicy } from '../../domain/policy'
-import { requireUserAllowPendingDeletion } from '../../require-user'
+import { requireUser } from '../../require-user'
 
 import { requestAccountDeletionForUser } from './request-account-deletion.logic'
 
 export const requestAccountDeletion = withErrorBoundary(async () => {
-  const userResult = await requireUserAllowPendingDeletion()
+  const userResult = await requireUser({ access: 'grace-period' })
   if (!userResult.ok) return userResult
 
   const authz = accountDeletionPolicy(userResult.value, { type: 'request' })

@@ -1,8 +1,9 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '@/shared/db/client'
 import {
   accountDeletionRequests,
+  activeDeletionRequest,
   type AccountDeletionRequestRow,
 } from '@/shared/db/schema/account-deletion'
 import { NotFoundError } from '@/shared/lib/errors/base'
@@ -16,13 +17,7 @@ export async function cancelAccountDeletionForUser(
   const [row] = await db
     .update(accountDeletionRequests)
     .set({ cancelledAt: new Date() })
-    .where(
-      and(
-        eq(accountDeletionRequests.userId, user.id),
-        isNull(accountDeletionRequests.cancelledAt),
-        isNull(accountDeletionRequests.completedAt),
-      ),
-    )
+    .where(and(eq(accountDeletionRequests.userId, user.id), activeDeletionRequest()))
     .returning()
 
   if (!row) {
