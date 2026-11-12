@@ -41,9 +41,18 @@ export default defineConfig({
         resolve: resolveTsconfigPaths,
         test: {
           name: 'unit',
-          include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+          include: ['src/**/*.test.ts'],
           exclude: ['src/**/*.integration.test.ts'],
           environment: 'node',
+          globals: false,
+        },
+      },
+      {
+        resolve: resolveTsconfigPaths,
+        test: {
+          name: 'component',
+          include: ['src/**/*.test.tsx'],
+          environment: 'jsdom',
           globals: false,
         },
       },

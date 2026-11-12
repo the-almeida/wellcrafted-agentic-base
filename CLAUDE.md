@@ -162,7 +162,7 @@ For changes touching auth, authorization, payments, or PII handling: invoke `@wc
 ## Files
 
 - File size soft limit: 300 lines. Split when exceeded
-- Tests co-located: `<file>.test.ts` (unit) or `<file>.integration.test.ts` (integration)
+- Tests co-located: `<file>.test.ts` (unit), `<file>.integration.test.ts` (integration) or `<file>.test.tsx` (component, jsdom + Testing Library)
 - E2E tests live in `/e2e/`
 
 ## Commands

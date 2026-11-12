@@ -23,7 +23,7 @@
 
 ## Tests
 
-- Co-located: `foo.ts` + `foo.test.ts` (unit) or `foo.integration.test.ts` (integration)
+- Co-located: `foo.ts` + `foo.test.ts` (unit), `foo.integration.test.ts` (integration), or `Foo.tsx` + `Foo.test.tsx` (component, runs in jsdom with Testing Library)
 - E2E tests in `/e2e/`
 - Test name describes behavior, not implementation
 - Reads like a spec: "user can sign in with valid credentials"
