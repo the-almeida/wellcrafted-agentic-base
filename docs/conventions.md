@@ -23,7 +23,7 @@
 
 ## Tests
 
-- Co-located: `foo.ts` + `foo.test.ts` (unit) or `foo.integration.test.ts` (integration)
+- Co-located: `foo.ts` + `foo.test.ts` (unit), `foo.integration.test.ts` (integration), or `Foo.tsx` + `Foo.test.tsx` (component, runs in jsdom with Testing Library)
 - E2E tests in `/e2e/`
 - Test name describes behavior, not implementation
 - Reads like a spec: "user can sign in with valid credentials"
@@ -34,7 +34,7 @@ A test is a falsifiable claim about behavior. If no realistic bug could flip it 
 
 ### Principles
 
-The agent reads from these principles directly; the checklist below is illustrative, not a substitute for judgment.
+`@wc-test-auditor` reads this section as its canon (`.claude/agents/wc-test-auditor.md` points here). The pattern table below is illustrative, not a substitute for judgment.
 
 1. **Falsifiable.** Before writing a test, name a one-line change to the code being tested that this test would catch. If you can't, do not write the test.
 2. **Caller's language.** Tests describe behavior at the public interface (HTTP, Server Action, exported function, rendered UI). Internal names, private functions, or private state in a test name or assertion is a signal the test is brittle and will break on refactor.
@@ -42,24 +42,26 @@ The agent reads from these principles directly; the checklist below is illustrat
 4. **Every line earns its place.** Setup, action, and assertion lines must each be load-bearing for the behavior being tested. A fixture value that the code under test never reads, a `fill` that satisfies validation the action does not trigger, a header that no handler inspects — these are evasive lines (see `CONTEXT.md`).
 5. **Specific to regressions, robust to refactor.** Assertions narrow enough that a real regression breaks them, wide enough that legitimate refactors don't. `.toBeTruthy()` rarely passes the first half; full-DOM snapshots rarely pass the second.
 6. **Passes for the right reason.** Green is necessary, not sufficient. Verify the code path implied by the test was actually exercised. The RED failure message is the primary cross-check: GREEN must resolve the same reason RED failed.
-7. **I/O sources are controlled.** Time, randomness, and external state are the three flake sources. `waitForTimeout` used as a substitute for waiting on a deterministic ready signal is a band-aid that ages into a flake.
+7. **I/O sources are controlled.** Time, randomness, and external state are the three flake sources. `waitForTimeout` used as a substitute for waiting on a deterministic ready signal is a band-aid that ages into a flake. The only legitimate `waitForTimeout` is a deliberate negative probe ("after 1s, this side effect should NOT have happened"), and even then prefer asserting on the absence of the artifact directly.
 8. **Cost-of-change lives in production code, not tests.** If a test forced you to add a flag, field, or branch the production code didn't otherwise need, the test design is suspect. Tests describe consumer-facing behavior; if no consumer needs the new flag, the test invented a fake consumer.
 
 ### Evasive-test patterns
 
 These are the concrete patterns `@wc-test-auditor` flags. Each violates one or more principles above. The heuristic ID is the value used in `// @wc-test-auditor-allow: <id> — <reason>` overrides.
 
-| ID                    | Pattern                                                                                                                                                               | Principle |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `setup-not-justified` | Setup line whose value never appears in the action or the assertion. The line was added to get past something that turned out not to block the test.                  | 4         |
-| `red-green-mismatch`  | GREEN passes but the code path the test claims to exercise is not actually touched by the GREEN diff. Test is green for an unrelated reason.                          | 6         |
-| `noop-negative`       | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has never rendered in any prior state of this test. The negative assertion was never going to fail anyway. | 1         |
-| `wide-mouth`          | `.toBeTruthy()`, `.toBeDefined()`, `expect(spy).toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check. Asserts something is "anything."      | 5         |
-| `swallowed-failure`   | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion. The failure path is hidden from the test runner.                | 3         |
-| `internal-mock`       | Mocking the code being tested or its internal (non-port) collaborator. (Already a hard rule in `/wc-tdd`; the agent re-verifies by reading code.)                     | 2         |
-| `sleep-band-aid`      | `waitForTimeout` used to wait for state that has a deterministic ready signal.                                                                                        | 7         |
-| `assertion-on-bug`    | Assertion text comes from a known error/regression path rather than a positive spec. Fixing the regression makes the assertion silently true.                         | 1         |
-| `skip-or-only`        | `.skip` / `.only` / `xit` / `fit` left in the test file.                                                                                                              | —         |
+| ID                      | Pattern                                                                                                                                                                                                                      | Principle |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `setup-not-justified`   | Setup line whose value never appears in the action or the assertion. The line was added to get past something that turned out not to block the test.                                                                         | 4         |
+| `red-green-mismatch`    | GREEN passes but the code path the test claims to exercise is not actually touched by the GREEN diff. Test is green for an unrelated reason.                                                                                 | 6         |
+| `noop-negative`         | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has never rendered in any prior state of this test. The negative assertion was never going to fail anyway.                                                        | 1         |
+| `wide-mouth`            | `.toBeTruthy()`, `.toBeFalsy()`, `.toBeDefined()`, `expect(spy).toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check. Asserts something is "anything."                                             | 5         |
+| `swallowed-failure`     | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion. The failure path is hidden from the test runner.                                                                       | 3         |
+| `internal-mock`         | Mocking the code being tested or its internal (non-port) collaborator. (Already a hard rule in `/wc-tdd`; the agent re-verifies by reading code.)                                                                            | 2         |
+| `sleep-band-aid`        | `waitForTimeout` used to wait for state that has a deterministic ready signal.                                                                                                                                               | 7         |
+| `assertion-on-bug`      | Assertion text comes from a known error/regression path rather than a positive spec. Fixing the regression makes the assertion silently true.                                                                                | 1         |
+| `other-cause-rejection` | A rejection test (`success: false`, 4xx, error result) passes because the input also breaks another rule, so it stays green if the rule it names is removed. Make every other field valid and assert the error path or code. | 1, 6      |
+| `concurrency-by-luck`   | A concurrency test fires parallel calls and checks only the final state, which running them one after another also produces. Force the interleaving (hold a lock, wait on a signal) and assert what only the guard prevents. | 1, 7      |
+| `skip-or-only`          | `.skip` / `.only` / `xit` / `fit` left in the test file.                                                                                                                                                                     | —         |
 
 ### Worked example: the OTP dummy-password case
 
@@ -99,7 +101,7 @@ Resolve by either:
   // @wc-test-auditor-allow: <heuristic-id> — <reason>
   ```
 
-  The override is per-finding (per heuristic ID), not per-test — other heuristics still run on the same lines. The reason must be specific and verifiable, e.g. `// @wc-test-auditor-allow: setup-not-justified — header read by middleware request-id tracing, not by the handler`. A vague reason ("not applicable", "fine", "needed for the test") is itself a finding.
+  The override is per-finding (per heuristic ID), not per-test — other heuristics still run on the same lines. The reason must be specific and verifiable, e.g. `// @wc-test-auditor-allow: setup-not-justified — header read by the proxy's request-id tracing, not by the handler`. A vague reason ("not applicable", "fine", "needed for the test") is itself a finding.
 
 The annotation is the audit log. It lives in the diff and is reviewed in the PR. There is no separate override file.
 
@@ -164,15 +166,17 @@ Scope when meaningful (module name): `feat(auth): add magic link sign-in`.
 Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything callable by anonymous users) MUST be rate-limited before going to production.
 
 - Per-IP and per-email limits where applicable; per-IP alone lets one bot saturate a single email's bucket, per-email alone lets an attacker scrape by varying emails. Wire both
-- Supabase Auth provides built-in rate limiting on its endpoints; the scaffold's auth flows benefit from that automatically. New public endpoints do NOT inherit this protection
-- `src/shared/lib/rate-limit/` ships a working implementation: Vercel Marketplace Redis when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are set (auto-injected by Vercel when you provision a Redis store), otherwise an in-memory fallback that warns once on startup. The in-memory backend resets on restart and doesn't share state across replicas — fine for local dev, not safe for multi-instance production
+- Do not count on Supabase Auth's own rate limits for app traffic. The auth calls leave from the Next.js server, so Supabase may see the server's IP instead of the user's (not verified; check before relying on it). Every public endpoint, the scaffold's auth flows included, calls `rateLimit` itself
+- `src/shared/lib/rate-limit/` has two backends:
+  - **Redis** (via `@upstash/redis`) when `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set. This is the production backend. On Vercel, the Upstash Redis Marketplace integration sets the project's env vars; its page uses these two names in its example ([vercel.com/marketplace/upstash/upstash-kv](https://vercel.com/marketplace/upstash/upstash-kv), checked 2026-11-12), but confirm the names in the project's env settings after installing
+  - **In-memory** when those vars are absent. Local dev only: it resets on restart, does not share state across instances, and never evicts keys. It warns once so a deploy without Redis is noticed
 - The DoD verifies rate limiting on new public endpoints
 
 ## Auth: accepted trade-offs
 
 These are deliberate choices the boilerplate makes that a downstream project may want to revisit:
 
-- **Account enumeration via OTP sign-in.** When a user requests an OTP code for an unregistered email, `requestSignInOtp` returns a specific Supabase error ("Signups not allowed for otp") that the form surfaces verbatim. An attacker can probe which emails are registered by reading this response. We accept this because (1) precise error UX helps the common case of typo'd emails, and (2) for the boilerplate's low-stakes default audience, enumeration isn't a primary threat. **If your project handles sensitive accounts (financial, medical, social-graph, anything where "X has an account here" is itself confidential), normalize `requestSignInOtp` to always return `ok(undefined)` and show a generic "If an account exists, we sent a code" message.** Per-IP rate limiting (already in place) blunts mass enumeration but does not eliminate it.
+- **Account enumeration via OTP sign-in.** When a user requests an OTP code for an unregistered email, `requestSignInOtp` returns a specific Supabase error ("Signups not allowed for otp") that the form surfaces verbatim. An attacker can probe which emails are registered by reading this response. We accept this because (1) precise error UX helps the common case of typo'd emails, and (2) for the boilerplate's low-stakes default audience, enumeration isn't a primary threat. **If your project handles sensitive accounts (financial, medical, social-graph, anything where "X has an account here" is itself confidential), normalize `requestSignInOtp` to always return `ok(undefined)` and show a generic "If an account exists, we sent a code" message.** Per-IP rate limiting blunts mass enumeration but does not eliminate it, and only on Vercel, where the client IP header can be trusted (see `src/shared/lib/http/request-ip.ts`).
 
 ## Accessibility
 

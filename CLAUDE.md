@@ -34,12 +34,14 @@ Trivial changes (typo, comment, formatting) skip the flow.
 
 - `utils/` or `common/` folder names (use `shared/lib/<category>/`)
 - Loose files in `shared/lib/` (always inside a category subfolder)
-- Cross-module direct imports (only via `index.ts` public API)
+- Cross-module direct imports (only via the module's `index.ts` or `client.ts`, see ADR-0006)
 - Circular dependencies
 - Business logic in RLS (RLS is ownership-only defense-in-depth)
 - Side effects in import
 - Mutable singletons
 - `--no-verify` on commits or pushes
+- `README.md` inside `src/` (document in `docs/` or in the code)
+- Justifying in docs, comments or commits why something does not need a test
 - `@apply` in CSS
 - Custom-built modal/dropdown/combobox (always wrap shadcn primitives)
 - Free-cast branded type constructors
@@ -62,8 +64,9 @@ Modular Monolith + Vertical Slice + Hexagonal (ports & adapters).
 - `src/modules/<domain>/domain/` — entities, value objects, pure rules. Optional, only when invariants exist
 - `src/modules/<domain>/domain/policy.ts` — per-module authorization policy. Required when the module has handlers that perform auth checks
 - `src/modules/<domain>/ports/` and `adapters/` — only when external dependencies exist
-- `src/modules/<domain>/index.ts` — only public API
-- Cross-module via `index.ts` only. Boundaries enforced by `eslint-plugin-boundaries`
+- `src/modules/<domain>/index.ts` — public API for server code (Server Components, Server Actions, Route Handlers, proxy)
+- `src/modules/<domain>/client.ts` — public API for Client Components, only when the module has client-callable exports (ADR-0006)
+- Cross-module via `index.ts` or `client.ts` only. Boundaries enforced by `eslint-plugin-boundaries`
 
 Full architecture in [docs/architecture.md](./docs/architecture.md).
 
@@ -159,7 +162,7 @@ For changes touching auth, authorization, payments, or PII handling: invoke `@wc
 ## Files
 
 - File size soft limit: 300 lines. Split when exceeded
-- Tests co-located: `<file>.test.ts` (unit) or `<file>.integration.test.ts` (integration)
+- Tests co-located: `<file>.test.ts` (unit), `<file>.integration.test.ts` (integration) or `<file>.test.tsx` (component, jsdom + Testing Library)
 - E2E tests live in `/e2e/`
 
 ## Commands

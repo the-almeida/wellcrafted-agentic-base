@@ -42,7 +42,9 @@ describe('signUpSchema', () => {
     const result = signUpSchema.safeParse({
       email: 'not-an-email',
       password: 'password123',
+      name: 'Alice',
     })
     expect(result.success).toBe(false)
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([['email']])
   })
 })

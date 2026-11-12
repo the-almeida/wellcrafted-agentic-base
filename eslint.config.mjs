@@ -125,7 +125,7 @@ const eslintConfig = defineConfig([
           selector:
             "CallExpression[callee.type='MemberExpression'][callee.property.name='getSession']",
           message:
-            'getSession() does not verify the JWT. Use getUser() for authorization (see docs/architecture.md).',
+            'getSession() does not verify the JWT. Use getUser() for authorization (see docs/conventions.md#authorization).',
         },
       ],
       '@typescript-eslint/consistent-type-imports': 'error',

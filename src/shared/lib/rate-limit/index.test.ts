@@ -75,3 +75,37 @@ describe('rateLimit (in-memory backend)', () => {
     }
   })
 })
+
+describe('rateLimit (no Redis configured)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('KV_REST_API_URL', '')
+    vi.stubEnv('KV_REST_API_TOKEN', '')
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+  })
+
+  it('importing the module does not warn', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await import('./index')
+
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('warns once, on the first call, that the in-memory backend is dev only', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { rateLimit } = await import('./index')
+    const config = { windowMs: 60_000, max: 10 }
+
+    await rateLimit(`test-warn-${Math.random()}`, config)
+    expect(warn).toHaveBeenCalledTimes(1)
+    await rateLimit(`test-warn-${Math.random()}`, config)
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('in-memory backend. Dev only'))
+  })
+})

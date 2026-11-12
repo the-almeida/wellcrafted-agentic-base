@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis'
 
+import { env } from '@/shared/lib/env'
 import { AppError } from '@/shared/lib/errors/base'
 import { err, ok, type Result } from '@/shared/lib/result'
 
@@ -21,34 +22,22 @@ export class RateLimitExceededError extends AppError {
 }
 
 /**
- * Rate limiter with two backends:
+ * Backends and when each is used: docs/conventions.md#rate-limiting.
  *
- * - **Vercel Marketplace Redis** (branded "Vercel KV") when
- *   `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set. Production-safe
- *   across serverless functions and multi-region deploys. Uses Upstash's
- *   client because Vercel deprecated `@vercel/kv`; the storage is still
- *   the Vercel-provisioned Redis store.
- * - **In-memory `Map`** fallback when those vars are absent. Fine for
- *   local dev (single-process); resets on restart and DOES NOT share
- *   state across replicas — never deploy this to multi-instance prod.
- *   A one-time warning logs at module load to surface that.
- *
- * The fixed-window algorithm is intentionally simple: `INCR`, set TTL
- * on the first increment, compare against `max`. Sliding-window is
- * marginally more accurate but the extra accuracy doesn't justify the
- * extra code for the boilerplate's threat model.
+ * Fixed window on purpose: sliding-window is marginally more accurate
+ * but the extra accuracy doesn't justify the extra code for the
+ * boilerplate's threat model.
  */
 
 type Counter = { count: number; resetAt: number }
 const memoryStore = new Map<RateLimitKey, Counter>()
 
-const KV_URL = process.env.KV_REST_API_URL
-const KV_TOKEN = process.env.KV_REST_API_TOKEN
+const KV_URL = env.KV_REST_API_URL
+const KV_TOKEN = env.KV_REST_API_TOKEN
 const useRedis = Boolean(KV_URL && KV_TOKEN)
 
-// Construct the client lazily so import-time side effects stay quiet
-// when the env vars are absent. We use `globalThis` to avoid creating
-// a fresh client per request in dev-mode HMR.
+// We use `globalThis` to avoid creating a fresh client per request in
+// dev-mode HMR.
 const globalForRedis = globalThis as unknown as { __rateLimitRedis?: Redis }
 function getRedis(): Redis {
   if (!globalForRedis.__rateLimitRedis) {
@@ -57,12 +46,14 @@ function getRedis(): Redis {
   return globalForRedis.__rateLimitRedis
 }
 
-if (!useRedis && typeof window === 'undefined' && process.env.NODE_ENV !== 'test') {
-  // One-time stderr nudge so the developer notices the boilerplate is
-  // running without a real backing store. Pino isn't used here to avoid
-  // pulling the logger into the rate-limit module's import graph.
+let hasWarnedAboutMemoryBackend = false
+function warnOnceAboutMemoryBackend() {
+  if (hasWarnedAboutMemoryBackend || process.env.NODE_ENV === 'test') return
+  hasWarnedAboutMemoryBackend = true
+  // Pino isn't used here to avoid pulling the logger into the rate-limit
+  // module's import graph.
   console.warn(
-    '[rate-limit] KV_REST_API_URL / KV_REST_API_TOKEN unset — using in-memory backend. NOT safe for multi-instance production.',
+    '[rate-limit] KV_REST_API_URL / KV_REST_API_TOKEN unset — using in-memory backend. Dev only; see docs/conventions.md#rate-limiting.',
   )
 }
 
@@ -71,6 +62,7 @@ export async function rateLimit(
   config: RateLimitConfig,
 ): Promise<Result<void, RateLimitExceededError>> {
   if (useRedis) return rateLimitRedis(key, config)
+  warnOnceAboutMemoryBackend()
   return rateLimitMemory(key, config)
 }
 
@@ -97,11 +89,14 @@ async function rateLimitRedis(
 ): Promise<Result<void, RateLimitExceededError>> {
   const redis = getRedis()
   const namespaced = `rl:${key}`
-  const count = await redis.incr(namespaced)
-  if (count === 1) {
-    // First hit of the window — set the TTL so the key auto-evicts.
-    await redis.pexpire(namespaced, config.windowMs)
-  }
+  // One MULTI round trip, so a dropped connection cannot leave a counter
+  // without an expiry (which would block the key forever). `NX` only sets
+  // the expiry when the key has none, so the window does not slide.
+  const [count] = await redis
+    .multi()
+    .incr(namespaced)
+    .pexpire(namespaced, config.windowMs, 'NX')
+    .exec<[number, 0 | 1]>()
   if (count > config.max) {
     return err(new RateLimitExceededError(key))
   }
