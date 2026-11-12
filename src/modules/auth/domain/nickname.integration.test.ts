@@ -44,9 +44,7 @@ async function databaseAccepts(nickname: string): Promise<boolean> {
     .catch((error: unknown) => {
       if (error instanceof TransactionRollbackError) return
       const constraint = (error as { cause?: { constraint_name?: string } }).cause?.constraint_name
-      if (constraint !== 'users_nickname_format' && constraint !== 'users_named_somehow') {
-        throw error
-      }
+      if (constraint !== 'users_nickname_format') throw error
     })
   return accepted
 }

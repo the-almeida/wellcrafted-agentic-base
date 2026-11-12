@@ -34,15 +34,9 @@ test.describe('@smoke auth', () => {
       // The only "or" left separates the forms from the anonymous entry (on by
       // default); with no provider there is no divider above the email form.
       await expect(page.getByText('or', { exact: true })).toHaveCount(1)
-      const dividerBelowForm = await page
-        .getByText('or', { exact: true })
-        .evaluate((el) =>
-          Boolean(
-            (document.querySelector('#email')?.compareDocumentPosition(el) ?? 0) &
-            Node.DOCUMENT_POSITION_FOLLOWING,
-          ),
-        )
-      expect(dividerBelowForm).toBe(true)
+      const emailBox = await page.getByLabel('Email').boundingBox()
+      const dividerBox = await page.getByText('or', { exact: true }).boundingBox()
+      expect(dividerBox?.y).toBeGreaterThan(emailBox?.y ?? Infinity)
     })
   }
 
