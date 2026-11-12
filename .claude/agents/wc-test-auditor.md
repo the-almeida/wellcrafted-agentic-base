@@ -48,7 +48,7 @@ A vague or formulaic reason is itself a finding. Reject:
 
 Accept:
 
-- "X-Request-Id header is read by the request-id middleware for log correlation, not by the route handler the test exercises"
+- "X-Request-Id header is read by the proxy's request-id tracing for log correlation, not by the route handler the test exercises"
 - "deliberate negative probe: assert after 1s that no email was sent"
 
 When the override is acceptable, still surface it in your report so a human reading the audit can spot-check.

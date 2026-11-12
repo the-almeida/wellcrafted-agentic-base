@@ -49,17 +49,19 @@ A test is a falsifiable claim about behavior. If no realistic bug could flip it 
 
 These are the concrete patterns `@wc-test-auditor` flags. Each violates one or more principles above. The heuristic ID is the value used in `// @wc-test-auditor-allow: <id> — <reason>` overrides.
 
-| ID                    | Pattern                                                                                                                                                                          | Principle |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `setup-not-justified` | Setup line whose value never appears in the action or the assertion. The line was added to get past something that turned out not to block the test.                             | 4         |
-| `red-green-mismatch`  | GREEN passes but the code path the test claims to exercise is not actually touched by the GREEN diff. Test is green for an unrelated reason.                                     | 6         |
-| `noop-negative`       | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has never rendered in any prior state of this test. The negative assertion was never going to fail anyway.            | 1         |
-| `wide-mouth`          | `.toBeTruthy()`, `.toBeFalsy()`, `.toBeDefined()`, `expect(spy).toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check. Asserts something is "anything." | 5         |
-| `swallowed-failure`   | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion. The failure path is hidden from the test runner.                           | 3         |
-| `internal-mock`       | Mocking the code being tested or its internal (non-port) collaborator. (Already a hard rule in `/wc-tdd`; the agent re-verifies by reading code.)                                | 2         |
-| `sleep-band-aid`      | `waitForTimeout` used to wait for state that has a deterministic ready signal.                                                                                                   | 7         |
-| `assertion-on-bug`    | Assertion text comes from a known error/regression path rather than a positive spec. Fixing the regression makes the assertion silently true.                                    | 1         |
-| `skip-or-only`        | `.skip` / `.only` / `xit` / `fit` left in the test file.                                                                                                                         | —         |
+| ID                      | Pattern                                                                                                                                                                                                                      | Principle |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `setup-not-justified`   | Setup line whose value never appears in the action or the assertion. The line was added to get past something that turned out not to block the test.                                                                         | 4         |
+| `red-green-mismatch`    | GREEN passes but the code path the test claims to exercise is not actually touched by the GREEN diff. Test is green for an unrelated reason.                                                                                 | 6         |
+| `noop-negative`         | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has never rendered in any prior state of this test. The negative assertion was never going to fail anyway.                                                        | 1         |
+| `wide-mouth`            | `.toBeTruthy()`, `.toBeFalsy()`, `.toBeDefined()`, `expect(spy).toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check. Asserts something is "anything."                                             | 5         |
+| `swallowed-failure`     | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion. The failure path is hidden from the test runner.                                                                       | 3         |
+| `internal-mock`         | Mocking the code being tested or its internal (non-port) collaborator. (Already a hard rule in `/wc-tdd`; the agent re-verifies by reading code.)                                                                            | 2         |
+| `sleep-band-aid`        | `waitForTimeout` used to wait for state that has a deterministic ready signal.                                                                                                                                               | 7         |
+| `assertion-on-bug`      | Assertion text comes from a known error/regression path rather than a positive spec. Fixing the regression makes the assertion silently true.                                                                                | 1         |
+| `other-cause-rejection` | A rejection test (`success: false`, 4xx, error result) passes because the input also breaks another rule, so it stays green if the rule it names is removed. Make every other field valid and assert the error path or code. | 1, 6      |
+| `concurrency-by-luck`   | A concurrency test fires parallel calls and checks only the final state, which running them one after another also produces. Force the interleaving (hold a lock, wait on a signal) and assert what only the guard prevents. | 1, 7      |
+| `skip-or-only`          | `.skip` / `.only` / `xit` / `fit` left in the test file.                                                                                                                                                                     | —         |
 
 ### Worked example: the OTP dummy-password case
 
@@ -99,7 +101,7 @@ Resolve by either:
   // @wc-test-auditor-allow: <heuristic-id> — <reason>
   ```
 
-  The override is per-finding (per heuristic ID), not per-test — other heuristics still run on the same lines. The reason must be specific and verifiable, e.g. `// @wc-test-auditor-allow: setup-not-justified — header read by middleware request-id tracing, not by the handler`. A vague reason ("not applicable", "fine", "needed for the test") is itself a finding.
+  The override is per-finding (per heuristic ID), not per-test — other heuristics still run on the same lines. The reason must be specific and verifiable, e.g. `// @wc-test-auditor-allow: setup-not-justified — header read by the proxy's request-id tracing, not by the handler`. A vague reason ("not applicable", "fine", "needed for the test") is itself a finding.
 
 The annotation is the audit log. It lives in the diff and is reviewed in the PR. There is no separate override file.
 
