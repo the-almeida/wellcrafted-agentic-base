@@ -1,0 +1,189 @@
+import { randomUUID } from 'node:crypto'
+
+import { afterEach, describe, expect, it } from 'vitest'
+
+import { cleanupAuthUser, createTestUser } from '@/shared/db/test-helpers'
+
+import { createFakeAuth } from '../adapters/auth-provider.fake.test-helper'
+import type { AuthProvider } from '../ports/auth-provider'
+
+import { requestSignInOtpWith } from './request-sign-in-otp/request-sign-in-otp.logic'
+import { requestSignUpOtpWith } from './request-sign-up-otp/request-sign-up-otp.logic'
+import { signInWith } from './sign-in/sign-in.logic'
+import { signUpWith } from './sign-up/sign-up.logic'
+import { verifyOtpWith } from './verify-otp/verify-otp.logic'
+
+// The public auth actions (no session required) with the contract-checked
+// fake in place of Supabase, the real in-memory rate limiter and the local
+// database. Every test uses its own IP and email, so limiter buckets never
+// leak between tests.
+
+const PASSWORD = 'correct-horse-1'
+const auth = createFakeAuth()
+const uniqueIp = () => `test-ip-${randomUUID()}`
+const uniqueEmail = (prefix: string) => `${prefix}-${randomUUID()}@actions.test`
+
+const createdUserIds: string[] = []
+afterEach(async () => {
+  for (const id of createdUserIds.splice(0)) await cleanupAuthUser(id)
+})
+
+function deps(ip = uniqueIp()): { authProvider: AuthProvider; ip: string } {
+  return { authProvider: auth.newSession(), ip }
+}
+
+type Action = {
+  name: string
+  perEmail: number
+  perIp: number
+  call: (ip: string, email: string) => Promise<{ ok: boolean; error?: { code: string } }>
+}
+
+const ACTIONS: Action[] = [
+  {
+    name: 'sign-in',
+    perEmail: 10,
+    perIp: 30,
+    call: (ip, email) => signInWith(deps(ip), { email, password: 'wrong-password-1' }),
+  },
+  {
+    name: 'sign-up',
+    perEmail: 5,
+    perIp: 30,
+    call: (ip, email) => signUpWith(deps(ip), { email, password: PASSWORD, name: 'Limit' }),
+  },
+  {
+    name: 'request-sign-in-otp',
+    perEmail: 5,
+    perIp: 30,
+    call: (ip, email) => requestSignInOtpWith(deps(ip), { email }),
+  },
+  {
+    name: 'request-sign-up-otp',
+    perEmail: 5,
+    perIp: 30,
+    call: (ip, email) => requestSignUpOtpWith(deps(ip), { email, name: 'Limit' }),
+  },
+  {
+    name: 'verify-otp',
+    perEmail: 10,
+    perIp: 50,
+    call: (ip, email) => verifyOtpWith(deps(ip), { email, token: '123456' }),
+  },
+]
+
+const rateLimited = { ok: false, error: expect.objectContaining({ code: 'RATE_LIMIT_EXCEEDED' }) }
+
+describe('public auth actions', () => {
+  it('signs in a registered user and returns their profile', async () => {
+    const seeded = await createTestUser({ prefix: 'sign-in' })
+    createdUserIds.push(seeded.id)
+    auth.addUser({ userId: seeded.id, email: seeded.email, password: PASSWORD })
+
+    const result = await signInWith(deps(), { email: seeded.email, password: PASSWORD })
+
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({ id: seeded.id, name: seeded.name, pendingDeletion: null }),
+    })
+  })
+
+  it('refuses a sign-in whose account has no profile row', async () => {
+    const email = uniqueEmail('no-profile')
+    auth.addUser({ email, password: PASSWORD })
+
+    const result = await signInWith(deps(), { email, password: PASSWORD })
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: 'VALIDATION_ERROR' }),
+    })
+  })
+
+  it('signs up and returns the new identity', async () => {
+    const email = uniqueEmail('sign-up')
+
+    const result = await signUpWith(deps(), { email, password: PASSWORD, name: 'New' })
+
+    expect(result).toEqual({ ok: true, value: { userId: expect.any(String), email } })
+  })
+
+  it('sends a sign-up code to the email', async () => {
+    const email = uniqueEmail('otp-sign-up')
+
+    const result = await requestSignUpOtpWith(deps(), { email, name: 'New' })
+
+    expect(result).toEqual({ ok: true, value: undefined })
+    expect(auth.lastCodeSentTo(email)).toMatch(/^\d{6}$/)
+  })
+
+  it.each([
+    {
+      name: 'sign-in with a wrong password',
+      run: async () => {
+        const email = uniqueEmail('wrong')
+        auth.addUser({ email, password: PASSWORD })
+        return signInWith(deps(), { email, password: 'wrong-password-1' })
+      },
+      code: 'UNAUTHENTICATED',
+    },
+    {
+      name: 'sign-up of a registered email',
+      run: async () => {
+        const email = uniqueEmail('taken')
+        auth.addUser({ email, password: PASSWORD })
+        return signUpWith(deps(), { email, password: PASSWORD, name: 'Again' })
+      },
+      code: 'EXTERNAL_SERVICE_ERROR',
+    },
+    {
+      name: 'sign-in code for an unknown email',
+      run: () => requestSignInOtpWith(deps(), { email: uniqueEmail('unknown') }),
+      code: 'UNAUTHENTICATED',
+    },
+    {
+      name: 'verify with a wrong code',
+      run: async () => {
+        const email = uniqueEmail('bad-code')
+        auth.addUser({ email, password: PASSWORD })
+        await requestSignInOtpWith(deps(), { email })
+        const wrong = auth.lastCodeSentTo(email) === '000000' ? '111111' : '000000'
+        return verifyOtpWith(deps(), { email, token: wrong })
+      },
+      code: 'UNAUTHENTICATED',
+    },
+  ])('passes the provider error through: $name', async ({ run, code }) => {
+    expect(await run()).toEqual({ ok: false, error: expect.objectContaining({ code }) })
+  })
+
+  it.each(ACTIONS)('$name: limits calls per email', async ({ perEmail, call }) => {
+    const email = uniqueEmail('per-email')
+
+    for (let n = 1; n <= perEmail; n++) {
+      // A fresh IP each time, so only the email bucket fills up.
+      expect(await call(uniqueIp(), email), `call ${n}`).not.toEqual(rateLimited)
+    }
+
+    expect(await call(uniqueIp(), email)).toEqual(rateLimited)
+  })
+
+  it.each(ACTIONS)('$name: limits calls per IP across emails', async ({ perIp, call }) => {
+    const ip = uniqueIp()
+
+    for (let n = 1; n <= perIp; n++) {
+      expect(await call(ip, uniqueEmail('per-ip')), `call ${n}`).not.toEqual(rateLimited)
+    }
+
+    expect(await call(ip, uniqueEmail('per-ip'))).toEqual(rateLimited)
+  })
+
+  it('rejects the 11th sign-in for one email even with the right password', async () => {
+    const email = uniqueEmail('brute')
+    auth.addUser({ email, password: PASSWORD })
+    for (let n = 0; n < 10; n++) {
+      await signInWith(deps(), { email, password: 'wrong-password-1' })
+    }
+
+    expect(await signInWith(deps(), { email, password: PASSWORD })).toEqual(rateLimited)
+  })
+})
