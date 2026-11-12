@@ -54,7 +54,6 @@ export default defineConfig({
           include: ['src/**/*.integration.test.ts'],
           environment: 'node',
           globals: false,
-          setupFiles: ['./src/shared/db/test-setup.ts'],
         },
       },
     ],
