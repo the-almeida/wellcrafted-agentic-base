@@ -1,6 +1,5 @@
-import { rateLimit, rateLimitKey } from '@/shared/lib/rate-limit'
-
 import type { PublicAuthContext } from '../public-auth-context'
+import { limitPublicAuthCall } from '../public-auth-rate-limits'
 
 import type { RequestSignUpOtpInput } from './request-sign-up-otp.schema'
 
@@ -14,13 +13,12 @@ export async function requestSignUpOtpWith(
   { authProvider, ip }: PublicAuthContext,
   input: RequestSignUpOtpInput,
 ) {
-  const emailLimit = await rateLimit(rateLimitKey('otp-sign-up', 'email', input.email), {
-    windowMs: 60_000,
-    max: 5,
-  })
-  if (!emailLimit.ok) return emailLimit
-  const ipLimit = await rateLimit(`otp-sign-up:ip:${ip}`, { windowMs: 60_000, max: 30 })
-  if (!ipLimit.ok) return ipLimit
+  const limited = await limitPublicAuthCall(
+    'otp-sign-up',
+    { ip, email: input.email },
+    { perIp: 30, perEmail: 5 },
+  )
+  if (!limited.ok) return limited
 
   return authProvider.requestSignUpOtp({ email: input.email, name: input.name })
 }

@@ -177,6 +177,23 @@ describe('public auth actions', () => {
     expect(await call(ip, uniqueEmail('per-ip'))).toEqual(rateLimited)
   })
 
+  it.each(ACTIONS)(
+    "$name: calls refused by an exhausted IP do not use up the email's budget",
+    async ({ perEmail, perIp, call }) => {
+      // One attacker IP spends its own budget, then keeps hammering a
+      // victim's email from that IP. The victim, from their own IP, must
+      // still get through: otherwise anyone can lock any email out.
+      const attackerIp = uniqueIp()
+      for (let n = 0; n < perIp; n++) await call(attackerIp, uniqueEmail('filler'))
+      const victim = uniqueEmail('victim')
+      for (let n = 0; n < perEmail; n++) {
+        expect(await call(attackerIp, victim)).toEqual(rateLimited)
+      }
+
+      expect(await call(uniqueIp(), victim)).not.toEqual(rateLimited)
+    },
+  )
+
   it('rejects the 11th sign-in for one email even with the right password', async () => {
     const email = uniqueEmail('brute')
     auth.addUser({ email, password: PASSWORD })

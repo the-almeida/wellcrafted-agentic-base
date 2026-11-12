@@ -165,7 +165,7 @@ Scope when meaningful (module name): `feat(auth): add magic link sign-in`.
 
 Public endpoints (sign-in, sign-up, password reset, webhook receivers, anything callable by anonymous users) MUST be rate-limited before going to production.
 
-- Per-IP and per-email limits where applicable; per-IP alone lets one bot saturate a single email's bucket, per-email alone lets an attacker scrape by varying emails. Wire both
+- Per-IP and per-email limits where applicable; per-IP alone lets one bot saturate a single email's bucket, per-email alone lets an attacker scrape by varying emails. Wire both, per IP first: a call the IP limit refuses must not count against the email, or one IP over its limit can lock any email out. The auth actions share `limitPublicAuthCall` (`src/modules/auth/features/public-auth-rate-limits.ts`)
 - Build email keys with `rateLimitKey(endpoint, 'email', email)`. It trims and lowercases the address; without that, every capitalization of one address gets its own bucket while all of them reach the same Supabase account
 - Do not count on Supabase Auth's own rate limits for app traffic. The auth calls leave from the Next.js server, so Supabase may see the server's IP instead of the user's, and its "per IP" limits would then apply to the whole app at once (not verified; check before relying on it). Every public endpoint, the scaffold's auth flows included, calls `rateLimit` itself
 - `rateLimit` is defense against abuse, not authorization. When Redis is unavailable it fails open: the call proceeds, and the failure goes to `logger.error` and Sentry (the key is left out, since it can contain an email). The Redis client uses a 1s timeout and a single retry, so an outage costs at most about two seconds per call
