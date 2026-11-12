@@ -117,6 +117,15 @@ describe('public auth actions', () => {
     expect(auth.lastCodeSentTo(email)).toMatch(/^\d{6}$/)
   })
 
+  it('answers a sign-in code request for an unknown email like a known one, sending nothing', async () => {
+    const email = uniqueEmail('unknown')
+
+    const result = await requestSignInOtpWith(deps(), { email })
+
+    expect(result).toEqual({ ok: true, value: undefined })
+    expect(() => auth.lastCodeSentTo(email)).toThrow('no code was sent')
+  })
+
   it.each([
     {
       name: 'sign-in with a wrong password',
@@ -135,11 +144,6 @@ describe('public auth actions', () => {
         return signUpWith(deps(), { email, password: PASSWORD, name: 'Again' })
       },
       code: 'EXTERNAL_SERVICE_ERROR',
-    },
-    {
-      name: 'sign-in code for an unknown email',
-      run: () => requestSignInOtpWith(deps(), { email: uniqueEmail('unknown') }),
-      code: 'UNAUTHENTICATED',
     },
     {
       name: 'verify with a wrong code',

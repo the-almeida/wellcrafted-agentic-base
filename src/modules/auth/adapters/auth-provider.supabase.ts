@@ -1,17 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import {
-  ExternalServiceError,
-  UnauthenticatedError,
-  ValidationError,
-} from '@/shared/lib/errors/base'
+import { ExternalServiceError, ValidationError } from '@/shared/lib/errors/base'
 import { UserIdSchema } from '@/shared/lib/ids'
 import { err, ok, type Result } from '@/shared/lib/result'
 
 import { AUTH_ERROR_MESSAGES, type AuthIdentity, type AuthProvider } from '../ports/auth-provider'
 
 import { createSupabaseServerClient } from './supabase/server-client'
-import { mapSupabaseAuthError } from './supabase-auth-errors'
+import { answersAsCodeSent, mapSupabaseAuthError } from './supabase-auth-errors'
 
 function identityFromUser(supaUser: {
   id: string
@@ -60,15 +56,10 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
         email,
         options: { shouldCreateUser: false },
       })
-      if (error) {
-        // Supabase returns "Signups not allowed for otp" when the email is
-        // not registered and shouldCreateUser=false. We surface this
-        // verbatim, which means a caller can probe whether an email is
-        // registered. Accepted trade-off — see `docs/conventions.md` →
-        // "Auth: accepted trade-offs". If your project handles sensitive
-        // accounts, normalize this to always return ok(undefined) and
-        // show a generic "if an account exists, we sent a code" message.
-        return err(new UnauthenticatedError(error.message, { cause: error }))
+      // An unknown email answers like a known one (no code is sent), so the
+      // sign-in page cannot be used to find out who has an account.
+      if (error && !answersAsCodeSent('sign-in', error)) {
+        return err(mapSupabaseAuthError('otp-request', error))
       }
       return ok(undefined)
     },
@@ -78,7 +69,9 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
         email,
         options: { data: { name }, shouldCreateUser: true },
       })
-      if (error) return err(mapSupabaseAuthError('otp-request', error))
+      if (error && !answersAsCodeSent('sign-up', error)) {
+        return err(mapSupabaseAuthError('otp-request', error))
+      }
       return ok(undefined)
     },
     async verifyOtp({ email, token }) {

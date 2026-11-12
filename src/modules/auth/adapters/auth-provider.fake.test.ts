@@ -13,6 +13,7 @@ authProviderContract('in-memory fake', {
   },
   readOtp: async (email) => auth.lastCodeSentTo(email),
   cleanup: async () => {},
+  accountExists: async (email) => auth.hasAccount(email),
 })
 
 describe('createFakeAuth outside tests', () => {

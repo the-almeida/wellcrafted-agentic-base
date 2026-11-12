@@ -4,9 +4,9 @@ import { limitPublicAuthCall } from '../public-auth-rate-limits'
 import type { RequestSignInOtpInput } from './request-sign-in-otp.schema'
 
 /**
- * Sends a 6-digit code to an existing user. The provider never creates an
- * account here (`shouldCreateUser: false` in the Supabase adapter): an
- * unknown email is an error, so a sign-in page cannot create accounts.
+ * Sends a 6-digit code to an existing user. It never creates an account,
+ * and an unknown email gets the same answer as a known one (no code is
+ * sent), so the sign-in page cannot be used to find out who has an account.
  */
 export async function requestSignInOtpWith(
   { authProvider, ip }: PublicAuthContext,

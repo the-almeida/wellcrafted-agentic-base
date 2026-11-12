@@ -48,6 +48,15 @@ authProviderContract('Supabase, local stack', {
     if (error) throw error
   },
   readOtp: pollMailpitForOtp,
+  async accountExists(email) {
+    const wanted = email.toLowerCase()
+    for (let page = 1; ; page++) {
+      const { data, error } = await getAdminSupabase().auth.admin.listUsers({ page, perPage: 200 })
+      if (error) throw error
+      if (data.users.some((user) => user.email?.toLowerCase() === wanted)) return true
+      if (data.users.length < 200) return false
+    }
+  },
   async cleanup(emails) {
     const wanted = new Set(emails.map((email) => email.toLowerCase()))
     for (let page = 1; ; page++) {

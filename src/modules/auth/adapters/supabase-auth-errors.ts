@@ -60,3 +60,26 @@ function statusOf(error: unknown): number | undefined {
   if (isAuthApiError(error) || isAuthRetryableFetchError(error)) return error.status
   return undefined
 }
+
+/**
+ * Whether a failed code request should still answer "we sent a code". Both
+ * cases would otherwise tell anyone whether an email has an account:
+ *
+ *   - `otp_disabled` on a sign-in request: the email has no account (the
+ *     adapter never creates one from the sign-in page). Nothing is sent.
+ *   - `over_email_send_rate_limit`: a code went to this address moments
+ *     ago, which only happens for real accounts. "We sent a code" is true.
+ *     Logged, because it also fires when the project's hourly email cap
+ *     is used up, and then real users get no email.
+ */
+export function answersAsCodeSent(flow: 'sign-in' | 'sign-up', error: unknown): boolean {
+  const code = isAuthApiError(error) ? error.code : undefined
+  if (code === 'over_email_send_rate_limit') {
+    logger.warn(
+      { source: 'supabase', flow, code, status: statusOf(error) },
+      'Supabase Auth email send limit reached; answered as sent',
+    )
+    return true
+  }
+  return flow === 'sign-in' && code === 'otp_disabled'
+}

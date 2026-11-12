@@ -31,6 +31,8 @@ export type ContractSubject = {
   readOtp(email: string): Promise<string>
   /** Called once at the end with every email the suite used. */
   cleanup(emails: string[]): Promise<void>
+  /** Whether an account exists for this email (checked out of band). */
+  accountExists(email: string): Promise<boolean>
 }
 
 const PASSWORD = 'contract-password-1'
@@ -112,13 +114,14 @@ export function authProviderContract(name: string, subject: ContractSubject) {
       })
     })
 
-    it('refuses a sign-in code for an email that has no account', async () => {
-      const result = await subject.newSession().requestSignInOtp({ email: newEmail('otp-unknown') })
+    it('answers a sign-in code request for an unknown email like a known one, creating nothing', async () => {
+      // Answering differently would tell anyone which emails have accounts.
+      const email = newEmail('otp-unknown')
 
-      expect(result).toEqual({
-        ok: false,
-        error: expect.objectContaining({ code: 'UNAUTHENTICATED' }),
-      })
+      const result = await subject.newSession().requestSignInOtp({ email })
+
+      expect(result).toEqual({ ok: true, value: undefined })
+      expect(await subject.accountExists(email)).toBe(false)
     })
 
     it('signs up with a code: the emailed code verifies and returns the new identity', async () => {

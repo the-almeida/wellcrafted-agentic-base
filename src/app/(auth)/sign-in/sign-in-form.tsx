@@ -47,7 +47,13 @@ export function SignInForm({ oauthProviders }: Props) {
   }
 
   if (stage.kind === 'awaiting-code') {
-    return <OtpVerifyForm email={stage.email} onBack={() => setStage({ kind: 'choose' })} />
+    return (
+      <OtpVerifyForm
+        flow="sign-in"
+        email={stage.email}
+        onBack={() => setStage({ kind: 'choose' })}
+      />
+    )
   }
 
   return (

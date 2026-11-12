@@ -63,10 +63,8 @@ export function createFakeAuth() {
           return ok(current)
         },
         async requestSignInOtp({ email }) {
-          if (!accounts.has(key(email))) {
-            return err(new UnauthenticatedError('Signups not allowed for otp'))
-          }
-          sendCode(email)
+          // Same answer either way; only real accounts get a code.
+          if (accounts.has(key(email))) sendCode(email)
           return ok(undefined)
         },
         async requestSignUpOtp({ email }) {
@@ -109,6 +107,11 @@ export function createFakeAuth() {
       userId?: UserId
     }): AuthIdentity {
       return createAccount(email, password, userId).identity
+    },
+
+    /** Whether an account exists for this email (test inspection only). */
+    hasAccount(email: string): boolean {
+      return accounts.has(key(email))
     },
 
     /** The code most recently "emailed" to this address. */

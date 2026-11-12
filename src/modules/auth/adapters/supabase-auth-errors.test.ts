@@ -5,7 +5,7 @@ import { logger } from '@/shared/observability/logger'
 
 import { AUTH_ERROR_MESSAGES } from '../ports/auth-provider'
 
-import { mapSupabaseAuthError } from './supabase-auth-errors'
+import { answersAsCodeSent, mapSupabaseAuthError } from './supabase-auth-errors'
 
 // Real auth-js error instances, the same ones the SDK returns (no mocks).
 
@@ -142,5 +142,38 @@ describe('mapSupabaseAuthError', () => {
 
     expect(warned).not.toHaveBeenCalled()
     expect(errored).not.toHaveBeenCalled()
+  })
+})
+
+describe('answersAsCodeSent', () => {
+  it('treats "no account" on a sign-in code request as sent, without logging', () => {
+    const warned = vi.spyOn(logger, 'warn').mockImplementation(() => undefined)
+
+    const error = new AuthApiError('Signups not allowed for otp', 422, 'otp_disabled')
+
+    expect(answersAsCodeSent('sign-in', error)).toBe(true)
+    expect(warned).not.toHaveBeenCalled()
+  })
+
+  it.each(['sign-in', 'sign-up'] as const)(
+    '%s: treats "a code was just sent" as sent and warns, since only real accounts hit it',
+    (flow) => {
+      const warned = vi.spyOn(logger, 'warn').mockImplementation(() => undefined)
+      const error = new AuthApiError('For security purposes...', 429, 'over_email_send_rate_limit')
+
+      expect(answersAsCodeSent(flow, error)).toBe(true)
+      expect(warned).toHaveBeenCalledWith(
+        { source: 'supabase', flow, code: 'over_email_send_rate_limit', status: 429 },
+        expect.any(String),
+      )
+    },
+  )
+
+  it.each([
+    ['sign-up', new AuthApiError('Signups not allowed for otp', 422, 'otp_disabled')],
+    ['sign-in', new AuthApiError('Request rate limit reached', 429, 'over_request_rate_limit')],
+    ['sign-in', new AuthRetryableFetchError('fetch failed', 0)],
+  ] as const)('%s: leaves other failures to the error mapper', (flow, error) => {
+    expect(answersAsCodeSent(flow, error)).toBe(false)
   })
 })

@@ -45,9 +45,10 @@ export type AuthProvider = {
     name: string
   }): Promise<Result<AuthIdentity, AuthError>>
   /**
-   * Sends a 6-digit code to an EXISTING user. `shouldCreateUser: false`
-   * prevents accidental account creation through the sign-in page; an
-   * unknown email returns an UnauthenticatedError, not a sent code.
+   * Sends a 6-digit code to an EXISTING user, and never creates an account
+   * (`shouldCreateUser: false`). An unknown email answers `ok` like a known
+   * one, but nothing is sent: a different answer would tell anyone which
+   * emails have accounts.
    */
   requestSignInOtp(input: { email: string }): Promise<Result<void, AuthError>>
   /**
