@@ -10,7 +10,7 @@
 
 ## 1. Modular Monolith (macro level)
 
-Each domain lives under `src/modules/<domain>/` with strong boundaries. Cross-module communication only through the public `index.ts`. Direct imports between module internals are blocked by `eslint-plugin-boundaries`.
+Each domain lives under `src/modules/<domain>/` with strong boundaries. Cross-module communication only through the module's public surface: `index.ts` (server) and, when the module has client-callable exports, `client.ts` (see [ADR-0006](./adr/0006-module-public-surface-server-client-split.md)). Direct imports between module internals are blocked by `eslint-plugin-boundaries`.
 
 **Why**: domains stay decoupled. Any module can be extracted into its own service later without rewriting it.
 
@@ -35,14 +35,18 @@ Modules declare external dependencies as interfaces in `ports/`. Concrete implem
 
 Authorization is **per-module**, not centralized. The auth module exposes only the contract (`requireUser`, `isAdmin`, `Policy<T>`) and knows nothing about other modules' actions. Each module declares its own action union and policy in `domain/policy.ts` and exports them via its `index.ts`.
 
-This is what keeps the modular-monolith claim honest: a new module never forces an edit to auth. Auth is extractable into its own service without coupling. The cost is no single file enumerating every action; the mitigation is a CI check that ensures every module with handlers has a `domain/policy.ts`.
+This is what keeps the modular-monolith claim honest: a new module never forces an edit to auth. Auth is extractable into its own service without coupling. The cost is no single file enumerating every action; the mitigation is a CI check (`scripts/check-policies.sh`) that fails when a module's features call `requireUser` but the module has no `domain/policy.ts`.
 
 ## Required vs Optional structure
 
 REQUIRED in every module:
 
 - `features/`
-- `index.ts`
+- `index.ts` (server surface)
+
+REQUIRED when Client Components import from the module:
+
+- `client.ts` (client surface: server-action handlers, browser-only adapters, pure values and types; see ADR-0006)
 
 REQUIRED when handlers perform authorization:
 
@@ -59,7 +63,7 @@ Do not create empty layers "for consistency". Every layer must earn its place.
 
 Enforced by `eslint-plugin-boundaries`:
 
-- `app` may import from `module` (only via `index.ts`), `shared-*`
+- `app` may import from `module` (only via `index.ts` or `client.ts`), `shared-*`
 - `proxy` may import from `module` (only via `index.ts`), `shared-lib`, `shared-obs`
 - `module-internal` may import from `shared-*` and same-module internals
 - `module-internal` MAY NOT import from another module's internals
@@ -67,7 +71,7 @@ Enforced by `eslint-plugin-boundaries`:
 
 ## Cross-module communication
 
-Only through `<module>/index.ts`. No event bus in the scaffold. If two modules need to coordinate beyond synchronous calls, that's a signal to revisit the boundary.
+Only through `<module>/index.ts` (server code) or `<module>/client.ts` (Client Components). No event bus in the scaffold. If two modules need to coordinate beyond synchronous calls, that's a signal to revisit the boundary.
 
 ## Database migrations: Drizzle authors structure, Supabase CLI runs the sequence
 
@@ -101,6 +105,6 @@ The ban is enforced by `scripts/check-no-edge.sh` (runs in pre-commit and CI): g
 3. Add `domain/policy.ts` as soon as a handler needs auth checks. Define your `Action` union and export a `Policy<YourAction>` instance
 4. Add other `domain/` files only when invariants emerge
 5. Add `ports/` + `adapters/` only when an external dependency appears
-6. Export from `index.ts` only what other modules legitimately need
+6. Export from `index.ts` (and `client.ts`, if Client Components need it) only what other modules legitimately need
 
 The smaller the public API, the easier the module is to evolve.

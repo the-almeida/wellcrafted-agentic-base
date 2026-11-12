@@ -21,22 +21,11 @@ export class RateLimitExceededError extends AppError {
 }
 
 /**
- * Rate limiter with two backends:
+ * Backends and when each is used: docs/conventions.md#rate-limiting.
  *
- * - **Vercel Marketplace Redis** (branded "Vercel KV") when
- *   `KV_REST_API_URL` and `KV_REST_API_TOKEN` are set. Production-safe
- *   across serverless functions and multi-region deploys. Uses Upstash's
- *   client because Vercel deprecated `@vercel/kv`; the storage is still
- *   the Vercel-provisioned Redis store.
- * - **In-memory `Map`** fallback when those vars are absent. Fine for
- *   local dev (single-process); resets on restart and DOES NOT share
- *   state across replicas — never deploy this to multi-instance prod.
- *   A one-time warning logs at module load to surface that.
- *
- * The fixed-window algorithm is intentionally simple: `INCR`, set TTL
- * on the first increment, compare against `max`. Sliding-window is
- * marginally more accurate but the extra accuracy doesn't justify the
- * extra code for the boilerplate's threat model.
+ * Fixed window on purpose: sliding-window is marginally more accurate
+ * but the extra accuracy doesn't justify the extra code for the
+ * boilerplate's threat model.
  */
 
 type Counter = { count: number; resetAt: number }

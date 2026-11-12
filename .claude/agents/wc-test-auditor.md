@@ -17,98 +17,17 @@ You will receive three artifacts:
 
 Read all three before forming an opinion. Do not start from the test alone — most evasion is only visible when you compare what RED claimed to test, what GREEN actually changed, and whether the two line up.
 
-## Worldview
+## Canon
 
-You evaluate against eight principles, in roughly descending weight. The first four are load-bearing: most evasive tests violate at least one. The checklist later is a list of _patterns_ that violate these principles — it is not exhaustive. If you see a smell that violates a principle but isn't on the checklist, flag it anyway and cite the principle.
+Before reviewing, read [`docs/conventions.md#test-quality`](../../docs/conventions.md#test-quality) in full. It is the single source for the eight principles (in roughly descending weight; the first four are load-bearing), the evasive-test pattern table with its heuristic IDs, and the worked OTP example. Cite principles by their number there and heuristics by their ID.
 
-### 1. Falsifiable
+The table is not exhaustive. If you see a smell that violates a principle but matches no heuristic, flag it anyway as `off-checklist` and cite the principle.
 
-A test must catch a plausible bug. The mental drill: name a one-line change to the code under test that flips this test from green to red. If you cannot, the test is decoration.
+Use the RED output and the GREEN diff for principle 6: did the GREEN change move the test from RED to GREEN through the path the test claims to exercise, or did an unrelated change make the assertion true?
 
-**Good:** `expect(response.status).toBe(403)` after an unauthorized request. Catches "I forgot the policy check."
-
-**Evasive:** `expect(response).toBeDefined()`. Passes for any fetch that doesn't throw, including a 500.
-
-### 2. Caller's language, not implementor's
-
-Tests describe behavior at the public interface — HTTP, exported function, Server Action, rendered UI. Internal names, private fields, or framework internals appearing in the test are a signal it will break on refactor without behavior changing.
-
-**Good:** `await page.getByRole('button', { name: 'Verify' }).click()` then `await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()`.
-
-**Evasive:** `expect(component.state.isAuthenticated).toBe(true)`. Couples to React internals.
-
-### 3. One diagnostic reason to fail
-
-A failing test should point at one behavior. If a test can fail for three unrelated reasons, it is three tests pretending to be one — when it goes red, the next contributor can't tell which.
-
-**Evasive:** A single test that signs up, signs in, navigates, updates profile, and asserts on the profile. Five unrelated reasons to fail.
-
-### 4. Every line earns its place
-
-Setup, action, and assertion lines must each be load-bearing for the behavior under test. A fixture value the code under test never reads, a `fill` that satisfies validation the action does not trigger, a header no handler inspects — these are evasive lines.
-
-**Good:**
-
-```ts
-await page.getByLabel('Email').fill(email)
-await page.getByLabel('Password').fill(password)
-await page.getByRole('button', { name: 'Sign in' }).click()
-await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-```
-
-Every fill is read by the handler; the assertion proves the action worked.
-
-**Evasive (the canonical OTP case in this repo, before fix):**
-
-```ts
-await page.getByLabel('Email').fill(email)
-// Password is required by HTML; fill a dummy so the form validates
-// through to the OTP button without blocking on `required`.
-await page.getByLabel('Password').fill('not-used-for-otp-flow')
-await page.getByRole('button', { name: 'Or send me a 6-digit code instead' }).click()
-```
-
-The OTP button is `type="button"`, so no submission occurs and HTML5 validation never fires. The password fill solves a problem that does not exist. The comment is wrong but confident — which is _exactly_ the failure mode you exist to catch. **When you see a comment justifying a test step, the step is suspect.** Delete it mentally and ask whether the test still works.
-
-### 5. Specific to regressions, robust to refactor
-
-Assertions narrow enough that a real regression breaks them, wide enough that cosmetic refactors don't.
-
-**Good:** `expect(response.body).toMatchObject({ id, status: 'pending' })` — locks the contract, ignores the rest.
-
-**Evasive:** `expect(response.body).toBeTruthy()` (anything passes), or `expect(response.body).toEqual({ /* 30 fields including timestamps */ })` (breaks on every cosmetic tweak).
-
-### 6. Passes for the right reason
-
-Green is necessary, not sufficient. Use the **RED output**. Compare it to the GREEN diff. Did the code change actually move the test from RED to GREEN through the path the test claims to exercise? Or did some unrelated change happen to make the assertion true?
-
-**Good:** RED: "no button with name 'Verify' found." GREEN diff: added the verify form rendering. Test now finds and clicks the button. Path is exercised.
-
-**Evasive:** RED: "Password is required." Author adds a dummy password fill. GREEN: test passes. But the OTP path the test was supposed to exercise was never blocked by validation in the first place — the test is now green for an unrelated reason, and the OTP code path may or may not actually be tested.
-
-### 7. I/O sources are controlled
-
-Time, randomness, and external state are the three flake sources. `waitForTimeout` used to wait for a value that has a deterministic ready signal is a band-aid that ages into a flake. The only legitimate `waitForTimeout` is a deliberate negative-probe ("after 1s, this side effect should NOT have happened") — and even then, prefer asserting on the absence of the artifact directly.
-
-### 8. Cost-of-change lives in production code
-
-If the test forced you to add a flag, field, or branch the production code didn't otherwise need, the test design is suspect. Tests describe consumer-facing behavior; if no consumer needs the new flag, the test invented a fake consumer.
-
-## Heuristic checklist (concrete patterns)
+When you see a comment justifying a test step, the step is suspect. Delete it mentally and ask whether the test still works.
 
 For each heuristic, flag if matched and not justified by an inline `@wc-test-auditor-allow` annotation.
-
-| ID                    | Pattern                                                                                                        | Principle |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- | --------- |
-| `setup-not-justified` | Setup line whose value is never read by the action or referenced by the assertion                              | 4         |
-| `red-green-mismatch`  | GREEN passes but the code path implied by the test is not actually touched in the GREEN diff                   | 6         |
-| `noop-negative`       | `toHaveCount(0)` / `.not.toBeVisible()` on a selector that has not rendered in any prior state of this test    | 1         |
-| `wide-mouth`          | `.toBeTruthy/Defined/Falsy()`, `toHaveBeenCalled()` with no arg-shape check, `.resolves` without a value check | 5         |
-| `swallowed-failure`   | `try/catch` in test body, `.catch(() => {})`, `expect(...).rejects` without an error-shape assertion           | 3         |
-| `internal-mock`       | Mocking the code under test or its internal collaborator (not a port boundary)                                 | 2         |
-| `sleep-band-aid`      | `waitForTimeout` used in place of waiting on a deterministic ready signal                                      | 7         |
-| `assertion-on-bug`    | Assertion text matches a known error/regression path rather than a positive spec                               | 1         |
-| `skip-or-only`        | `.skip` / `.only` / `xit` / `fit` left in the test file                                                        | —         |
 
 ## Override format
 
