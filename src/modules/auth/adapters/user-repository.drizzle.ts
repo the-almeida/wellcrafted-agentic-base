@@ -6,7 +6,6 @@ import { users } from '@/shared/db/schema/auth'
 import type { UserId } from '@/shared/lib/ids'
 
 import type { User } from '../domain/user'
-import type { CreateUserInput, UserRepository } from '../ports/user-repository'
 
 function rowToUser(row: typeof users.$inferSelect, pendingDeletion: User['pendingDeletion']): User {
   return {
@@ -20,7 +19,9 @@ function rowToUser(row: typeof users.$inferSelect, pendingDeletion: User['pendin
   }
 }
 
-export const userRepository: UserRepository = {
+// No port in front: one implementation, tested against the local database
+// (ADR-0007). Rows are created by the auth trigger, not by the app.
+export const userRepository = {
   // One query for the user and their account state. The active-request
   // condition must stay in the join (ON), not in WHERE: in WHERE, a user
   // whose requests were all cancelled would not be found at all.
@@ -36,17 +37,5 @@ export const userRepository: UserRepository = {
       .limit(1)
     if (!row) return null
     return rowToUser(row.user, row.scheduledFor ? { scheduledFor: row.scheduledFor } : null)
-  },
-  async create(input: CreateUserInput) {
-    const [row] = await db
-      .insert(users)
-      .values({
-        id: input.id,
-        email: input.email,
-        name: input.name,
-      })
-      .returning()
-    if (!row) throw new Error('user creation returned no rows')
-    return rowToUser(row, null)
   },
 }
