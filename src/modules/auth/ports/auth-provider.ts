@@ -82,8 +82,8 @@ export type AuthProvider = {
   }): Promise<Result<AuthIdentity, AuthError>>
   /** Sets a new password for the signed-in account. */
   replacePassword(input: { password: string }): Promise<Result<void, AuthError>>
-  /** Signs the account out everywhere except this session. */
-  endOtherSessions(): Promise<Result<void, AuthError>>
+  /** The id of this session (auth.sessions.id), or null when signed out. */
+  currentSessionId(): Promise<string | null>
   signOut(): Promise<Result<void, AuthError>>
   getCurrentIdentity(): Promise<AuthIdentity | null>
 }

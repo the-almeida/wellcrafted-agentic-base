@@ -85,36 +85,32 @@ export const userRepository = {
     }
   },
   /**
-   * Records that the person proved control of `provenEmail` (a code sent
-   * to it, or an OAuth provider vouching for it), only while it is still
-   * the account's email: proving an old address must not verify a new one.
-   * The first time wins: later calls keep it.
+   * Secures the account on the first proof of its email, in one transaction
+   * (public.secure_first_email_proof, see its migration): random password,
+   * every session but `keepSessionId` ended, the proof recorded and the
+   * account locked for a few seconds against writes already on their way.
+   * Proving an old address, or an email already proven, changes nothing.
+   * `askForPassword`: the account existed before this sign-in.
    */
-  async markEmailVerified(id: UserId, provenEmail: string) {
-    await db
-      .update(users)
-      .set({ emailVerifiedAt: sql`COALESCE(${users.emailVerifiedAt}, now())` })
-      .where(and(eq(users.id, id), sql`lower(${users.email}) = lower(${provenEmail})`))
-  },
-  /**
-   * What the first proof of the account's email calls for, when proving
-   * `provenEmail` now is that first proof (the account's email, not yet
-   * verified). Any password on such an account may have been set by
-   * someone who never owned the email (Confirm email is off), so it must be
-   * replaced: `secure`. Asking the person for a new one only makes sense
-   * when the account existed before this sign-in: `askForPassword`. A code
-   * or OAuth sign-up creates the account in the same flow that proves it.
-   */
-  async firstEmailProof(
+  async secureFirstEmailProof(
     id: UserId,
     provenEmail: string,
-  ): Promise<{ secure: boolean; askForPassword: boolean }> {
-    const rows = await db.execute<{ secure: boolean; old: boolean }>(sql`
-      SELECT (email_verified_at IS NULL AND lower(email) = lower(${provenEmail})) AS secure,
-             created_at < now() - interval '5 minutes' AS old
-      FROM public.users WHERE id = ${id}
+    keepSessionId: string,
+  ): Promise<{ secured: boolean; askForPassword: boolean }> {
+    const rows = await db.execute<{ secured: boolean; ask_for_password: boolean }>(sql`
+      SELECT secured, ask_for_password
+      FROM public.secure_first_email_proof(${id}, ${provenEmail}, ${keepSessionId})
     `)
-    const secure = rows[0]?.secure === true
-    return { secure, askForPassword: secure && rows[0]?.old === true }
+    return {
+      secured: rows[0]?.secured === true,
+      askForPassword: rows[0]?.ask_for_password === true,
+    }
+  },
+  /** Whether the account is still locked after the first proof of its email. */
+  async isAuthLocked(id: UserId): Promise<boolean> {
+    const rows = await db.execute<{ locked: boolean }>(sql`
+      SELECT auth_locked_until > clock_timestamp() AS locked FROM public.users WHERE id = ${id}
+    `)
+    return rows[0]?.locked === true
   },
 }

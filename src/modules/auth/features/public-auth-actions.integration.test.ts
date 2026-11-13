@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/shared/db/client'
@@ -315,12 +315,14 @@ describe('public auth actions', () => {
 
 // Mitigation for accounts whose password may have been set by someone who
 // never owned the email (Confirm email is off): on the first proof of the
-// email, whoever proved it keeps the account.
+// email, whoever proved it keeps the account. These tests check that both
+// sign-ins that prove an email run it; what it does to real passwords and
+// sessions is tested against Supabase in email-proof.integration.test.ts.
 describe('first proof of an unverified email', () => {
-  // An unverified account (public.users row, read by the rule) with a
-  // password in the fake (what the assertions sign in with). `ageMinutes`
-  // backdates it: a prompt for a new password only makes sense for an
-  // account that existed before this sign-in.
+  // An unverified account (public.users row, read by the rule), also known
+  // to the fake so it can sign in. `ageMinutes` backdates it: a prompt for a
+  // new password only makes sense for an account that existed before this
+  // sign-in.
   async function unverifiedAccount({ ageMinutes }: { ageMinutes: number }) {
     const seeded = await createTestUser({ prefix: 'first-proof' })
     createdUserIds.push(seeded.id)
@@ -337,13 +339,17 @@ describe('first proof of an unverified email', () => {
     return verifyOtpWith(deps(), { email, token: auth.lastCodeSentTo(email) })
   }
 
-  const passwordStillWorks = async (email: string) =>
-    (await auth.newSession().signInWithPassword({ email, password: PASSWORD })).ok
+  // The account's password in Supabase Auth, replaced by the mitigation.
+  async function passwordHash(id: UserId) {
+    const rows = await db.execute<{ hash: string | null }>(
+      sql`SELECT encrypted_password AS hash FROM auth.users WHERE id = ${id}`,
+    )
+    return rows[0]?.hash
+  }
 
-  it('replaces the password, ends other sessions and asks for a new password', async () => {
+  it('secures the account and asks for a new password', async () => {
     const account = await unverifiedAccount({ ageMinutes: 60 })
-    const elsewhere = auth.newSession()
-    await elsewhere.signInWithPassword({ email: account.email, password: PASSWORD })
+    const before = await passwordHash(account.id)
 
     const result = await verifyWithCode(account.email)
 
@@ -351,37 +357,39 @@ describe('first proof of an unverified email', () => {
       ok: true,
       value: expect.objectContaining({ userId: account.id, mustSetPassword: true }),
     })
-    expect(await elsewhere.getCurrentIdentity()).toBeNull()
-    expect(await passwordStillWorks(account.email)).toBe(false)
+    expect(await passwordHash(account.id)).not.toBe(before)
     expect((await userRepository.findById(account.id))?.emailVerifiedAt).toBeInstanceOf(Date)
   })
 
   it('leaves an already verified account alone', async () => {
     const account = await unverifiedAccount({ ageMinutes: 60 })
     await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, account.id))
+    const before = await passwordHash(account.id)
 
     const result = await verifyWithCode(account.email)
 
     expect(result).toMatchObject({ ok: true, value: { mustSetPassword: false } })
-    expect(await passwordStillWorks(account.email)).toBe(true)
+    expect(await passwordHash(account.id)).toBe(before)
   })
 
   it('secures an account created moments ago too, without asking for a password', async () => {
     // A code or OAuth sign-up: the account is born in this same sign-in.
     const account = await unverifiedAccount({ ageMinutes: 0 })
+    const before = await passwordHash(account.id)
 
     const result = await verifyWithCode(account.email)
 
     expect(result).toMatchObject({ ok: true, value: { mustSetPassword: false } })
-    expect(await passwordStillWorks(account.email)).toBe(false)
+    expect(await passwordHash(account.id)).not.toBe(before)
   })
 
   it('does the same on the first OAuth sign-in to that email', async () => {
     const account = await unverifiedAccount({ ageMinutes: 60 })
+    const before = await passwordHash(account.id)
 
     const result = await completeOAuthSignInWith(deps(), auth.issueOAuthCode(account.email))
 
     expect(result).toMatchObject({ ok: true, value: { mustSetPassword: true } })
-    expect(await passwordStillWorks(account.email)).toBe(false)
+    expect(await passwordHash(account.id)).not.toBe(before)
   })
 })

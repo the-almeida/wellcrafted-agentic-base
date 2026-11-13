@@ -29,6 +29,13 @@
       "when": 1794473318135,
       "tag": "20261112102000_add_anonymous_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794581322310,
+      "tag": "20261113144842_add_users_auth_locked_until",
+      "breakpoints": true
     }
   ]
 }

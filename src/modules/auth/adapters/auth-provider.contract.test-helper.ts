@@ -299,19 +299,20 @@ export function authProviderContract(name: string, subject: ContractSubject) {
       ).toBe(true)
     })
 
-    it('ends the account’s other sessions and keeps the current one', async () => {
-      const email = newEmail('other-sessions')
+    it('names each signed-in session apart, and none once signed out', async () => {
+      const email = newEmail('session-id')
       await subject.seedUser(email, PASSWORD)
       const elsewhere = subject.newSession()
       await elsewhere.signInWithPassword({ email, password: PASSWORD })
       const here = subject.newSession()
       await here.signInWithPassword({ email, password: PASSWORD })
 
-      const ended = await here.endOtherSessions()
+      const id = await here.currentSessionId()
 
-      expect(ended).toEqual({ ok: true, value: undefined })
-      expect(await elsewhere.getCurrentIdentity()).toBeNull()
-      expect(await here.getCurrentIdentity()).toMatchObject({ email })
+      expect(id).toEqual(expect.any(String))
+      expect(await elsewhere.currentSessionId()).not.toBe(id)
+      await here.signOut()
+      expect(await here.currentSessionId()).toBeNull()
     })
   })
 }

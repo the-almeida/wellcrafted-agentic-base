@@ -89,11 +89,16 @@ export function createSupabaseAuthProvider(getClient: () => Promise<SupabaseClie
       if (error) return err(mapSupabaseAuthError('replace-password', error))
       return ok(undefined)
     },
-    async endOtherSessions() {
+    async currentSessionId() {
       const supabase = await getClient()
-      const { error } = await supabase.auth.signOut({ scope: 'others' })
-      if (error) return err(mapSupabaseAuthError('sign-out', error))
-      return ok(undefined)
+      // Verifies the access token and reads its session_id claim.
+      try {
+        const { data } = await supabase.auth.getClaims()
+        const sessionId: unknown = data?.claims.session_id
+        return typeof sessionId === 'string' ? sessionId : null
+      } catch {
+        return null
+      }
     },
     async signOut() {
       const supabase = await getClient()

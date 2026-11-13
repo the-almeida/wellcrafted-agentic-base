@@ -24,5 +24,5 @@ export const setPassword = withErrorBoundary(async (raw: unknown) => {
   })
   if (!limit.ok) return limit
 
-  return setPasswordWith({ authProvider }, parsed.data)
+  return setPasswordWith({ authProvider }, userResult.value.id, parsed.data)
 })

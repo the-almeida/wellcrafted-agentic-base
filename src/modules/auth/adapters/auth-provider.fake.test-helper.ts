@@ -63,6 +63,7 @@ export function createFakeAuth() {
 
   function newSession(): AuthProvider & { signInAs(account: Account): void } {
     const token = Symbol('session')
+    const sessionId = randomUUID()
     let currentId: UserId | null = null
 
     const current = () => {
@@ -148,11 +149,8 @@ export function createFakeAuth() {
         account.password = password
         return ok(undefined)
       },
-      async endOtherSessions() {
-        const account = current()
-        if (!account) return err(new UnauthenticatedError(AUTH_ERROR_MESSAGES.unavailable))
-        sessions.set(account.identity.userId, new Set([token]))
-        return ok(undefined)
+      async currentSessionId() {
+        return current() ? sessionId : null
       },
       async signOut() {
         if (currentId) sessions.get(currentId)?.delete(token)
