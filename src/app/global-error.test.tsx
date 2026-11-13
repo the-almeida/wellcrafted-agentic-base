@@ -18,6 +18,8 @@ describe('global error page', () => {
     vi.unstubAllEnvs()
   })
 
+  // The fresh import loads the page's whole module graph: about 2 s alone,
+  // past the default 5 s while the full suite loads the machine.
   it('reports critical_error_shown with the page and the error digest', async () => {
     vi.resetModules()
     vi.stubEnv('NEXT_PUBLIC_POSTHOG_KEY', 'phc_test')
@@ -29,5 +31,5 @@ describe('global error page', () => {
       page: '/dashboard',
       code: 'abc123',
     })
-  })
+  }, 20_000)
 })

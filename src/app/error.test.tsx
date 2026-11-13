@@ -25,6 +25,8 @@ describe('app error page', () => {
     vi.unstubAllEnvs()
   })
 
+  // The first fresh import of the page loads its whole module graph: about
+  // 2 s alone, past the default 5 s while the full suite loads the machine.
   it('reports critical_error_shown with the page and the error digest', async () => {
     await renderErrorPage(Object.assign(new Error('boom'), { digest: 'abc123' }))
 
@@ -32,7 +34,7 @@ describe('app error page', () => {
       page: '/dashboard',
       code: 'abc123',
     })
-  })
+  }, 20_000)
 
   it("reports code 'client' for an error thrown in the browser, which has no digest", async () => {
     await renderErrorPage(new Error('boom'))
