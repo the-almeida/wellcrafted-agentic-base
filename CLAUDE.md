@@ -184,6 +184,7 @@ Applies only when `CLAUDE_CODE_REMOTE=true`. The container is ephemeral and recl
 - On session start or resume with an existing branch, read the open PR's handoff block first and continue from its **Next step**
 - Screenshots and QA evidence go to a private Artifact page linked from the handoff, never into the repo
 - `pre-push` skips tests for cloud pushes to `claude/*` branches so RED states can be pushed; CI on the draft PR runs the full suite
+- Cloud branches are named `claude/<type>-<slug>` (`claude/feat-audit-log`). The session's random branch is renamed on the first push by `/wc-temp-cloud-container-handoff`; the `PreToolUse` hook `.claude/hooks/pre-push-branch-name.sh` blocks `git push` to a `claude/*` branch that does not match
 - The `Stop` hook (`.claude/hooks/stop-wip-check.sh`) blocks the end of a turn once when there is uncommitted or unpushed work
 
 ## Definition of Done

@@ -65,6 +65,16 @@ export default defineConfig({
           globals: false,
         },
       },
+      {
+        // Claude Code hooks are shell scripts; their tests spawn the script
+        // with fixture hook input against a throwaway git repo.
+        test: {
+          name: 'tooling',
+          include: ['.claude/hooks/**/*.test.ts'],
+          environment: 'node',
+          globals: false,
+        },
+      },
     ],
   },
 })
