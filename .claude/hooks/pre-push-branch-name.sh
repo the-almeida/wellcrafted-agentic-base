@@ -77,7 +77,7 @@ done <<<"$segments"
 cat >&2 <<EOF
 Push blocked: branch '$bad' does not follow claude/<type>-<slug>.
 <type> is a conventional-commit type (feat, fix, chore, docs, refactor, test, perf, ci, build, style, revert); <slug> is lowercase kebab-case describing the work, e.g. claude/feat-audit-log.
-Rename, push the new branch, then delete the old remote branch if it exists:
+Rename and push the new branch; deleting the old remote branch is optional (cloud git may refuse it with 403):
   git branch -m claude/<type>-<slug>
   git push -u origin claude/<type>-<slug>
   git push origin --delete $bad
