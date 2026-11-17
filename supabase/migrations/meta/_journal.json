@@ -15,6 +15,27 @@
       "when": 1778865960169,
       "tag": "20260515172600_add_account_deletion_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794470382533,
+      "tag": "20261112075942_add_users_email_verified_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794473318135,
+      "tag": "20261112102000_add_anonymous_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794581322310,
+      "tag": "20261113144842_add_users_auth_locked_until",
+      "breakpoints": true
     }
   ]
 }

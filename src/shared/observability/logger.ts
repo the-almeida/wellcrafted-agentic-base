@@ -8,6 +8,7 @@ const REDACT_PATHS = [
   '*.password',
   '*.token',
   '*.secret',
+  '*.appSecret',
   '*.apiKey',
   '*.authorization',
   'req.headers.authorization',

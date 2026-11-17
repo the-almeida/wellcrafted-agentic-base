@@ -17,10 +17,20 @@ export abstract class AppError extends Error {
   }
 }
 
+/**
+ * What a ValidationError carries to the browser: the shape of Zod's
+ * `error.flatten()`, field names and messages only. Typed so nothing else
+ * (internal state, raw input) can ride along.
+ */
+export type ValidationDetails = {
+  formErrors: string[]
+  fieldErrors: Record<string, string[] | undefined>
+}
+
 export class ValidationError extends AppError {
   readonly code = 'VALIDATION_ERROR' as const
   constructor(
-    public readonly details: unknown,
+    public readonly details: ValidationDetails,
     message = 'Validation failed',
     options?: { cause?: unknown },
   ) {
@@ -67,6 +77,14 @@ export class AccountPendingDeletionError extends AppError {
   }
 }
 
+/** The caller has an anonymous account, and this needs a permanent one. */
+export class PermanentAccountRequiredError extends AppError {
+  readonly code = 'PERMANENT_ACCOUNT_REQUIRED' as const
+  constructor(message = 'This needs a permanent account', options?: { cause?: unknown }) {
+    super(message, options)
+  }
+}
+
 export class ExternalServiceError extends AppError {
   readonly code = 'EXTERNAL_SERVICE_ERROR' as const
   constructor(
@@ -85,4 +103,5 @@ export type AppErrorCode =
   | ForbiddenError['code']
   | ConflictError['code']
   | AccountPendingDeletionError['code']
+  | PermanentAccountRequiredError['code']
   | ExternalServiceError['code']

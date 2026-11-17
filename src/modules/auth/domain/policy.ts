@@ -14,7 +14,7 @@ export function isAdmin(user: User): boolean {
  *
  * Any authenticated user can request or cancel deletion of their own
  * account; the action is implicitly scoped to self because the handlers
- * pass the caller's User (from `requireUserAllowPendingDeletion`) into
+ * pass the caller's User (from `requireUser({ allow: ['anonymous', 'pending-deletion'] })`) into
  * the policy and downstream logic. The policy still exists so that
  * future restrictions (e.g. "admin accounts cannot self-delete") have a
  * single place to live, and so that the boilerplate's "every handler
@@ -23,3 +23,12 @@ export function isAdmin(user: User): boolean {
 export type AccountDeletionAction = { type: 'request' } | { type: 'cancel' }
 
 export const accountDeletionPolicy: Policy<AccountDeletionAction> = () => ok(undefined)
+
+/**
+ * The caller's own public profile. Always scoped to self (the handler
+ * passes the caller's User); anonymous accounts included, since editing the
+ * nickname is the one write they have.
+ */
+export type ProfileAction = { type: 'update-nickname' }
+
+export const profilePolicy: Policy<ProfileAction> = () => ok(undefined)

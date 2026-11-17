@@ -48,9 +48,13 @@ describe('requestAccountDeletionForUser', () => {
     createdUserIds.push(data.user.id)
     return {
       id: UserIdSchema.parse(data.user.id),
+      isAnonymous: false,
       email: data.user.email!,
+      profile: null,
       name: `Logic ${prefix}`,
       role: 'user' as const,
+      pendingDeletion: null,
+      emailVerifiedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

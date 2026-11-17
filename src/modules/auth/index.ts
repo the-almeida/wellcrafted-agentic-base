@@ -26,16 +26,23 @@
 export type { Policy } from './domain/policy'
 export { isAdmin } from './domain/policy'
 export type { Role, User } from './domain/user'
+export { displayName, formatPublicHandle, type PublicProfile } from './domain/public-profile'
 
 export { getOptionalUser } from './get-optional-user'
-export { requireUser, requireUserAllowPendingDeletion } from './require-user'
+export { requireUser, type Allowance } from './require-user'
 
 export { updateSession } from './adapters/supabase/update-session'
+export { warnOnAuthMisconfiguration } from './warn-on-auth-misconfiguration'
+export { anonymousSignInsEnabled } from './domain/anonymous-sign-ins'
+export {
+  activeOAuthProviders,
+  facebookDataDeletionSetup,
+  type OAuthProvider,
+} from './domain/oauth-providers'
 
 export { cancelAccountDeletion } from './features/account-deletion/cancel-account-deletion.handler'
 export { handleFacebookDataDeletion } from './features/account-deletion/facebook-data-deletion'
 export { findDeletionRequestByCode } from './features/account-deletion/find-deletion-request-by-code'
-export { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
 export { requestAccountDeletion } from './features/account-deletion/request-account-deletion.handler'
 export {
   ACCOUNT_HOME_PATH,
@@ -43,5 +50,6 @@ export {
   resolveProtectedRouteRedirect,
 } from './features/account-deletion/resolve-protected-redirect'
 
-export { exchangeOauthCode } from './features/oauth-callback/oauth-callback.handler'
+export { completeOAuthSignIn } from './features/oauth-callback/oauth-callback.handler'
+export { SET_PASSWORD_PATH } from './features/set-password/set-password-path'
 export { oauthCallbackInputSchema } from './features/oauth-callback/oauth-callback.schema'

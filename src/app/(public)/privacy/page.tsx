@@ -36,6 +36,12 @@ export default function PrivacyPage() {
       <h2>3. Personal data we process</h2>
       <ul>
         <li>
+          <strong>Public profile</strong>: the nickname you choose and the number shown with it (for
+          example &ldquo;Wolf #0042&rdquo;). Other users of the service can see it. If you use the
+          service without an account, this profile and the technical data of your session are all we
+          keep about you.
+        </li>
+        <li>
           <strong>Account data</strong>: email address, display name, authentication metadata, and
           OAuth identifiers (Google, Facebook) when you sign in via a third-party provider.
         </li>
@@ -83,9 +89,10 @@ export default function PrivacyPage() {
 
       <h2>6. Retention</h2>
       <p>
-        We retain personal data only as long as needed for the purposes above. Account data is
-        deleted within <strong>{'{{ACCOUNT_DELETION_GRACE_DAYS}}'}</strong> days of a verified
-        deletion request (see Section 10). Operational logs are retained for{' '}
+        Account data, including accounts used without an email, is kept while the account exists,
+        until you request its deletion; we do not delete accounts automatically. It is then deleted
+        within <strong>{'{{ACCOUNT_DELETION_GRACE_DAYS}}'}</strong> days of a verified deletion
+        request (see Section 10). Operational logs are retained for{' '}
         <strong>{'{{OPERATIONAL_LOG_RETENTION_DAYS}}'}</strong> days. Records required to satisfy
         legal obligations may be retained longer.
       </p>

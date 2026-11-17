@@ -26,3 +26,15 @@ describe('createExampleEntitySchema', () => {
     expect(result.success).toBe(false)
   })
 })
+
+describe('createExampleEntitySchema ownership', () => {
+  it('drops a userId sent by the client, so the owner always comes from the session', () => {
+    const result = createExampleEntitySchema.safeParse({
+      title: 'x',
+      userId: '00000000-0000-4000-8000-000000000000',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data).not.toHaveProperty('userId')
+  })
+})

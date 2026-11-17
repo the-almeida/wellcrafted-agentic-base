@@ -31,13 +31,22 @@ const serverShape = {
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   DATABASE_URL: z.url(),
   SENTRY_AUTH_TOKEN: optionalString,
-  // OAuth provider credentials. Consumed by Supabase via supabase/config.toml's
-  // env() indirection, NOT by app code — so they stay optional here. Listed so
-  // missing values surface during startup validation instead of at sign-in time.
+  // OAuth provider credentials, optional. A set client id makes the provider
+  // active: its button appears on the sign-in and sign-up pages (see
+  // activeOAuthProviders). Locally, Supabase also reads them through
+  // supabase/config.toml's env() indirection. FACEBOOK_OAUTH_CLIENT_SECRET is
+  // required whenever the Facebook client id is set: the data deletion
+  // callback verifies signatures with it (facebookDataDeletionSetup).
   GOOGLE_OAUTH_CLIENT_ID: optionalString,
   GOOGLE_OAUTH_CLIENT_SECRET: optionalString,
   FACEBOOK_OAUTH_CLIENT_ID: optionalString,
   FACEBOOK_OAUTH_CLIENT_SECRET: optionalString,
+  // Anonymous mode, on unless "false" (anonymousSignInsSetup). Supabase's
+  // anonymous sign-ins must match; the build checks it.
+  ANONYMOUS_SIGN_INS_ENABLED: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.enum(['true', 'false']).optional(),
+  ),
   // Optional. Without them rate-limit uses its in-memory backend (dev
   // only). See docs/conventions.md#rate-limiting.
   KV_REST_API_URL: optionalUrl,
@@ -50,10 +59,26 @@ const serverShape = {
   ACCOUNT_DELETION_GRACE_DAYS: z.coerce.number().int().positive().default(30),
 }
 
-const serverSchema = z.object(serverShape)
+// Rate limiting uses Redis only when both are set. One without the other is
+// always a deploy mistake, and silently falling back to per-instance memory
+// would multiply every limit by the number of instances, so fail loudly.
+const serverSchema = z.object(serverShape).superRefine((value, ctx) => {
+  const hasUrl = value.KV_REST_API_URL !== undefined
+  const hasToken = value.KV_REST_API_TOKEN !== undefined
+  if (hasUrl === hasToken) return
+  ctx.addIssue({
+    code: 'custom',
+    path: [hasUrl ? 'KV_REST_API_TOKEN' : 'KV_REST_API_URL'],
+    message: 'KV_REST_API_URL and KV_REST_API_TOKEN must be set together',
+  })
+})
 const clientSchema = z.object(sharedShape)
 
 type Env = z.infer<typeof serverSchema>
+
+export function parseServerEnv(raw: Record<string, unknown>) {
+  return serverSchema.safeParse(raw)
+}
 
 const isServer = typeof window === 'undefined'
 
@@ -77,7 +102,7 @@ function loadEnv(): Env {
     return { ...readPublicEnv(), ...process.env } as unknown as Env
   }
   if (isServer) {
-    const parsed = serverSchema.safeParse({ ...process.env, ...readPublicEnv() })
+    const parsed = parseServerEnv({ ...process.env, ...readPublicEnv() })
     if (!parsed.success) {
       console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors)
       throw new Error('Invalid environment variables')

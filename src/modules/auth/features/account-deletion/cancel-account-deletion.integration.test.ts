@@ -48,9 +48,13 @@ describe('cancelAccountDeletionForUser', () => {
     createdUserIds.push(data.user.id)
     return {
       id: UserIdSchema.parse(data.user.id),
+      isAnonymous: false,
       email: data.user.email!,
+      profile: null,
       name: `Cancel ${prefix}`,
       role: 'user' as const,
+      pendingDeletion: null,
+      emailVerifiedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

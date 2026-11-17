@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql, type SQL } from 'drizzle-orm'
 import { pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 import type { AccountDeletionRequestId, UserId } from '@/shared/lib/ids'
@@ -22,11 +22,22 @@ export const accountDeletionRequests = pgTable(
     confirmationCode: text('confirmation_code').notNull().unique(),
   },
   (table) => [
+    // Same rule as activeDeletionRequest() below: at most one active request
+    // per user, which is what lets queries join on it without duplicates.
     uniqueIndex('account_deletion_requests_active_user_idx')
       .on(table.userId)
       .where(sql`${table.cancelledAt} IS NULL AND ${table.completedAt} IS NULL`),
   ],
 )
+
+/**
+ * A request is active (the account is pending deletion) until it is
+ * cancelled or completed. `scheduledFor` does not matter: a request past its
+ * date stays active until the purge completes it.
+ */
+export function activeDeletionRequest(): SQL {
+  return sql`${accountDeletionRequests.cancelledAt} IS NULL AND ${accountDeletionRequests.completedAt} IS NULL`
+}
 
 export type AccountDeletionRequestRow = typeof accountDeletionRequests.$inferSelect
 export type NewAccountDeletionRequestRow = typeof accountDeletionRequests.$inferInsert

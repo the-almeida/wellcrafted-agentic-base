@@ -18,6 +18,28 @@ test.describe('@smoke auth', () => {
     await expectNoA11yViolations(page)
   })
 
+  // The default environment (CI and a fresh clone) sets no OAuth client id, so
+  // no provider is active and neither page may offer a provider button.
+  for (const path of ['/sign-in', '/sign-up']) {
+    test(`${path} shows no OAuth buttons or divider when no provider is active`, async ({
+      page,
+    }) => {
+      await page.goto(path)
+      // Anchor: the email form rendered, so the absence below is meaningful.
+      await expect(page.getByLabel('Email')).toBeVisible()
+
+      await expect(
+        page.getByRole('button', { name: /^continue with (google|facebook)$/i }),
+      ).toHaveCount(0)
+      // The only "or" left separates the forms from the anonymous entry (on by
+      // default); with no provider there is no divider above the email form.
+      await expect(page.getByText('or', { exact: true })).toHaveCount(1)
+      const emailBox = await page.getByLabel('Email').boundingBox()
+      const dividerBox = await page.getByText('or', { exact: true }).boundingBox()
+      expect(dividerBox?.y).toBeGreaterThan(emailBox?.y ?? Infinity)
+    })
+  }
+
   test('OTP verify form passes a11y after a code is requested', async ({
     page,
     seedUser,

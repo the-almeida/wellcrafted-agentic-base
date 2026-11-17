@@ -49,23 +49,25 @@ test.describe('OTP sign-in', () => {
     await expect(page.getByText(user.email)).toBeVisible()
   })
 
-  test('unknown email shows an error and never receives a code', async ({ page, uniqueEmail }) => {
+  test('unknown email gets the same answer as a known one and never receives a code', async ({
+    page,
+    uniqueEmail,
+  }) => {
     const email = uniqueEmail('otp-unknown')
 
     await page.goto('/sign-in')
     await page.getByLabel('Email').fill(email)
     await page.getByRole('button', { name: 'Or send me a 6-digit code instead' }).click()
 
-    // shouldCreateUser=false → adapter returns UnauthenticatedError →
-    // form renders the message in its role=alert region.
-    await expect(page.locator('form').getByRole('alert')).toBeVisible()
-    // Scoped to the form: Next's route announcer is also role=alert (empty).
-    // Production builds replace returned Error instances with React's generic
-    // message; the action seam must hand the form real, plain error data.
-    await expect(page.locator('form').getByRole('alert')).not.toContainText('omitted in production')
-    // Still on the choose stage; the verify form must NOT have rendered.
-    await expect(page.getByLabel('6-digit code')).toHaveCount(0)
+    // Same next step as for a registered email, with copy that does not say
+    // whether the account exists.
+    await expect(page.getByLabel('6-digit code')).toBeVisible()
+    await expect(
+      page.getByText(`If an account exists for ${email}`, { exact: false }),
+    ).toBeVisible()
 
+    // GoTrue sends the email inside the request, before the action resolves,
+    // so by now any code would already be in Mailpit.
     const list = await fetch(
       `http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`,
     )

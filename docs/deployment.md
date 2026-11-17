@@ -59,7 +59,7 @@ Alternatives if Resend does not fit: Brevo (daily free quota), Postmark (strong 
 
 ## 4. Vercel project
 
-1. Import the GitHub repo in Vercel. The framework preset (Next.js) and the default build command work as is.
+1. Import the GitHub repo in Vercel. The framework preset (Next.js) and the default build command work as is. `pnpm build` first runs `pnpm check:oauth-providers`, which asks the Supabase project which sign-in providers are enabled and fails the build if they disagree with the app env (see [section 7](#7-oauth-providers-optional)). So the Supabase variables must be available at build time, and the project must be reachable from Vercel's build.
 2. Set the environment variables before the first deploy, either on the import screen or in Settings → Environment Variables. Without the required ones the app fails env validation. Scope them per environment (Production / Preview / Development):
 
 | Variable                                                    | Required           | Where to get it                                                                                                                                                                                                                                         |
@@ -89,9 +89,9 @@ If Preview uses the same Supabase variables as Production, every PR preview read
 
 ## 5. Redis for rate limiting
 
-This needs the Vercel project from section 4. In the project, go to Storage → Marketplace → pick a Redis provider (Upstash) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project automatically, so you do not set them by hand. Env changes only apply to new deployments: redeploy (Deployments → ⋯ → Redeploy) after connecting the store. If the log shows `[rate-limit] ... using in-memory backend` in production, the store is not connected.
+This needs the Vercel project from section 4. In the project, go to Storage → Marketplace → pick a Redis provider (Upstash) → connect it to the project. Vercel adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project automatically, so you do not set them by hand. Env changes only apply to new deployments: redeploy (Deployments → ⋯ → Redeploy) after connecting the store. If the log shows `[rate-limit] in-memory rate limiting active` in production, the store is not connected.
 
-On the first deploy with the store connected, sign in once and confirm it succeeds. The limiter sends `INCR` + `PEXPIRE ... NX` in one `MULTI`, which CI only exercises against a fake client, never a real Upstash database.
+On the first deploy with the store connected, sign in once and confirm it succeeds. The limiter counts with one Lua script (`EVAL`). CI runs it against a real Redis behind `serverless-redis-http`, which speaks the Upstash REST API, but never against a real Upstash database.
 
 Rate limiting never blocks access to the app:
 
@@ -111,9 +111,11 @@ All settings are in Supabase Dashboard → Authentication.
 3. **Confirm email** (Sign In / Providers → Email). Turn it **off**, matching local (`enable_confirmations = false`). The cloud default is on.
    _If skipped:_ password sign-up creates the user without a session, so the redirect to `/dashboard` bounces back to `/sign-in` with no explanation.
    _Trade-off:_ password sign-up accepts unverified emails. OTP sign-up is unaffected, since entering the code verifies the email.
-4. **Rate limits.** Raise "emails sent per hour" (30 by default with custom SMTP) to fit expected traffic.
+4. **Anonymous sign-ins** (Sign In / Providers → "Allow anonymous sign-ins"). Turn it **on**, matching the app's default (anonymous mode, "Continue without an account"). To leave anonymous mode out, set `ANONYMOUS_SIGN_INS_ENABLED=false` in Vercel and keep this off.
+   _If skipped:_ the build fails (`pnpm check:oauth-providers` compares both). Supabase limits anonymous sign-ins to 30 per hour per IP; the limit is per visitor because the sign-in runs in the browser.
+5. **Rate limits.** Raise "emails sent per hour" (30 by default with custom SMTP) to fit expected traffic.
    _If skipped:_ every sign-up or sign-in email after the 30th in an hour fails.
-5. **Smoke test.** On the production URL, create an account with a real address, receive the code, and finish sign-up. Then sign out and sign in with an emailed code. This validates SMTP, templates, and URL configuration together.
+6. **Smoke test.** On the production URL, create an account with a real address, receive the code, and finish sign-up. Then sign out and sign in with an emailed code. This validates SMTP, templates, and URL configuration together.
 
 ## 7. OAuth providers (optional)
 
@@ -129,9 +131,9 @@ Each provider redirects to **Supabase**, and Supabase then redirects to the app'
 Each provider's credentials go in **two places**, with the same values:
 
 - **Supabase dashboard** (table above): Supabase Auth uses them to run the OAuth flow.
-- **Vercel env** (`GOOGLE_OAUTH_*` / `FACEBOOK_OAUTH_*`, section 4): the app uses them to decide which sign-in buttons to show. The Facebook secret also verifies data-deletion callbacks; without it that endpoint answers `503 facebook_data_deletion_not_configured`.
+- **Vercel env** (`GOOGLE_OAUTH_*` / `FACEBOOK_OAUTH_*`, section 4): the app uses them to decide which sign-in buttons to show. The Facebook secret also verifies data-deletion callbacks, so with Facebook active it is required: the build fails without it, and if it goes missing after the build the endpoint answers `503 facebook_data_deletion_not_configured` and reports to the logs and Sentry. With neither Facebook variable set, the endpoint answers 404. To turn Facebook sign-in off later, remove only the client id and keep the secret, so existing Facebook users can still request deletion through Facebook.
 
-Set only one side and the provider is either hidden (missing in Vercel) or shown but broken (missing in Supabase).
+Set only one side and the build fails, naming the provider (see [docs/conventions.md → OAuth providers](./conventions.md#oauth-providers)). The check runs at build time only: a provider changed in the Supabase dashboard after a deploy goes unnoticed until the next build, so change providers through a deploy.
 
 Then run the manual OAuth smoke in [docs/dod.md → Release checklist (auth)](./dod.md#release-checklist-auth).
 

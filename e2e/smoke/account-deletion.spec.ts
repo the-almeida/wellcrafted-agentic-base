@@ -60,4 +60,20 @@ test.describe('@smoke account deletion', () => {
       page.getByRole('heading', { level: 1, name: 'Account scheduled for deletion' }),
     ).toBeVisible()
   })
+
+  test('cancelling the deletion restores full access', async ({ page, seedUser, signInAs }) => {
+    const user = await seedUser()
+    await signInAs(page, user)
+
+    await page.goto('/account')
+    await page.getByRole('button', { name: 'Request account deletion' }).click()
+    await page.waitForURL((url) => url.pathname === '/account/pending-deletion')
+
+    await page.getByRole('button', { name: 'Cancel deletion' }).click()
+    await page.waitForURL((url) => url.pathname === '/account')
+
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL((url) => url.pathname === '/dashboard')
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
+  })
 })

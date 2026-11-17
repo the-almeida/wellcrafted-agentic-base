@@ -1,0 +1,32 @@
+# Local services the test suite needs besides Supabase (which the Supabase CLI runs).
+#
+# redis + srh: a real Redis behind serverless-redis-http, which speaks the same REST API as
+# Upstash. The rate-limit contract tests run the production @upstash/redis client against it.
+# The app itself (`pnpm dev`) does not use it: without KV_* vars it rate-limits in memory.
+#
+# Start with `docker compose up -d` (bootstrap, dev and CI do this for you).
+name: wellcrafted-agentic-base
+
+services:
+  redis:
+    image: redis:7.4.12-alpine
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  srh:
+    image: hiett/serverless-redis-http:0.0.10
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      SRH_MODE: env
+      # Local-only token; must match the rate-limit integration tests.
+      SRH_TOKEN: local-srh-token
+      SRH_CONNECTION_STRING: redis://redis:6379
+    ports:
+      - '127.0.0.1:8079:80'

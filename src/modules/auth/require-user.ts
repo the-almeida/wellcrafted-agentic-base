@@ -1,54 +1,48 @@
-import { AccountPendingDeletionError, UnauthenticatedError } from '@/shared/lib/errors/base'
+import {
+  AccountPendingDeletionError,
+  PermanentAccountRequiredError,
+  UnauthenticatedError,
+} from '@/shared/lib/errors/base'
 import { err, ok, type Result } from '@/shared/lib/result'
 
-import { authProvider } from './adapters/auth-provider.supabase'
-import { userRepository } from './adapters/user-repository.drizzle'
 import type { User } from './domain/user'
-import { getActiveDeletionRequest } from './features/account-deletion/deletion-requests'
+import { resolveCurrentUser } from './resolve-current-user'
 
 /**
- * Fail-closed: returns `UnauthenticatedError` when no Supabase session
- * exists or the session-bearing user has no matching `public.users` row.
+ * Account states a caller may let through besides the default (a permanent,
+ * active account):
  *
- * Also fails with `AccountPendingDeletionError` for users with an active
- * account deletion request. This is the boilerplate default: business
- * actions refuse pending users automatically, no per-handler check
- * required. The two flows that legitimately operate during the grace
- * window (cancel deletion, sign out) use
- * `requireUserAllowPendingDeletion` instead.
- *
- * Uses Supabase's `getUser()` (which round-trips to the auth API and verifies
- * the JWT). `getSession()` is unsafe for authorization (banned by lint).
+ *   - `anonymous`: accounts from an anonymous sign-in, for pages and flows
+ *     they may use (seeing the app, their profile, deleting the account).
+ *     Writes that need a real account keep the default.
+ *   - `pending-deletion`: accounts with an active deletion request, for the
+ *     flows that must keep working during the grace period (the
+ *     pending-deletion page, cancelling or re-requesting the deletion, and
+ *     the protected layout that routes those users to that page).
  */
-export async function requireUser(): Promise<
-  Result<User, UnauthenticatedError | AccountPendingDeletionError>
-> {
-  const identityResult = await requireUserAllowPendingDeletion()
-  if (!identityResult.ok) return identityResult
-
-  const active = await getActiveDeletionRequest(identityResult.value.id)
-  if (active) {
-    return err(new AccountPendingDeletionError(active.scheduledFor))
-  }
-  return identityResult
-}
+export type Allowance = 'anonymous' | 'pending-deletion'
 
 /**
- * Identity-only variant: confirms there is an authenticated user and a
- * matching `public.users` row, but does NOT reject users with a pending
- * account deletion. Use only for flows that must remain available during
- * the grace window (cancel deletion, request deletion idempotency, sign out).
+ * Fail-closed: `UnauthenticatedError` when there is no Supabase session or
+ * the session's user has no `public.users` row; `PermanentAccountRequiredError`
+ * for an anonymous account and `AccountPendingDeletionError` for one pending
+ * deletion, unless `allow` lists them (when both apply, the anonymous one is
+ * reported). Uses Supabase's `getUser()` (verifies the JWT); `getSession()`
+ * is unsafe for authorization and banned by lint.
  */
-export async function requireUserAllowPendingDeletion(): Promise<
-  Result<User, UnauthenticatedError>
+export async function requireUser({ allow = [] }: { allow?: readonly Allowance[] } = {}): Promise<
+  Result<User, UnauthenticatedError | PermanentAccountRequiredError | AccountPendingDeletionError>
 > {
-  const identity = await authProvider.getCurrentIdentity()
-  if (!identity) {
-    return err(new UnauthenticatedError('not authenticated'))
+  const current = await resolveCurrentUser()
+  if (current.status === 'signed-out') return err(new UnauthenticatedError('not authenticated'))
+  if (current.status === 'no-record') return err(new UnauthenticatedError('user record not found'))
+
+  const { user } = current
+  if (user.isAnonymous && !allow.includes('anonymous')) {
+    return err(new PermanentAccountRequiredError())
   }
-  const user = await userRepository.findById(identity.userId)
-  if (!user) {
-    return err(new UnauthenticatedError('user record not found'))
+  if (user.pendingDeletion && !allow.includes('pending-deletion')) {
+    return err(new AccountPendingDeletionError(user.pendingDeletion.scheduledFor))
   }
   return ok(user)
 }
