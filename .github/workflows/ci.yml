@@ -11,7 +11,9 @@ concurrency:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where Playwright 1.60 cannot install
+    # Chromium. Move forward once Playwright supports the newer image.
+    runs-on: ubuntu-24.04
     # A normal run takes 5-8 minutes. Without a limit, a hung step holds the
     # runner for GitHub's 6-hour default (seen on 2026-11-11 in the browser install).
     timeout-minutes: 25
@@ -47,6 +49,9 @@ jobs:
       - name: Start Redis for the rate-limit tests
         run: docker compose up -d --wait
 
+      # Also written to .env.local: scripts run with --env-file-if-exists=.env.local,
+      # and Node warns on stderr when the file is missing, so CI would not run
+      # them the way a developer machine does.
       - name: Export Supabase env
         run: |
           STATUS=$(pnpm exec supabase status -o json)
@@ -56,7 +61,7 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(echo "$STATUS" | jq -r '.ANON_KEY')"
             echo "SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS" | jq -r '.SERVICE_ROLE_KEY')"
             echo "DATABASE_URL=$(echo "$STATUS" | jq -r '.DB_URL')"
-          } >> "$GITHUB_ENV"
+          } | tee -a "$GITHUB_ENV" > .env.local
 
       - name: Apply migrations
         run: pnpm db:migrate
